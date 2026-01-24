@@ -51,6 +51,8 @@ class URDF():
         link_ele: Element
             xml elements contains informations for link
         """
+        dec = constants.get_precision_constant()
+
         # create a link element
         link_ele = Element("link")
         link_ele.attrib = {"name": self.get_link_name(link)}
@@ -58,24 +60,24 @@ class URDF():
         # add inertia sub-element
         inertial = SubElement(link_ele, "inertial")
         origin = SubElement(inertial, "origin")
-        origin.attrib = {"xyz": "{} {} {}".format(self.get_link_inertial_origin(link)[0], self.get_link_inertial_origin(link)[1], self.get_link_inertial_origin(link)[2]),
-                        "rpy": "{} {} {}".format(self.get_link_inertial_origin(link)[3], self.get_link_inertial_origin(link)[4], self.get_link_inertial_origin(link)[5])}
+        origin.attrib = {"xyz": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(self.get_link_inertial_origin(link)[0], self.get_link_inertial_origin(link)[1], self.get_link_inertial_origin(link)[2], dec = dec),
+                        "rpy": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(self.get_link_inertial_origin(link)[3], self.get_link_inertial_origin(link)[4], self.get_link_inertial_origin(link)[5], dec = dec)}
         mass = SubElement(inertial, "mass")
-        mass.attrib = {"value": "{}".format(self.get_link_mass(link))}
+        mass.attrib = {"value": "{:.{dec}f}".format(self.get_link_mass(link), dec = dec)}
         inertia = SubElement(inertial, "inertia")
-        inertia.attrib = {"ixx": "{}".format(self.get_link_inertia(link)[0]),
-                        "iyy": "{}".format(self.get_link_inertia(link)[1]),
-                        "izz": "{}".format(self.get_link_inertia(link)[2]),
-                        "ixy": "{}".format(self.get_link_inertia(link)[3]),
-                        "iyz": "{}".format(self.get_link_inertia(link)[4]),
-                        "ixz": "{}".format(self.get_link_inertia(link)[5])}
+        inertia.attrib = {"ixx": "{:.{dec}f}".format(self.get_link_inertia(link)[0], dec = dec),
+                        "iyy": "{:.{dec}f}".format(self.get_link_inertia(link)[1], dec = dec),
+                        "izz": "{:.{dec}f}".format(self.get_link_inertia(link)[2], dec = dec),
+                        "ixy": "{:.{dec}f}".format(self.get_link_inertia(link)[3], dec = dec),
+                        "iyz": "{:.{dec}f}".format(self.get_link_inertia(link)[4], dec = dec),
+                        "ixz": "{:.{dec}f}".format(self.get_link_inertia(link)[5], dec = dec)}
         
         # add visual sub-element
         visual = SubElement(link_ele, "visual")
         visual.attrib = {"name": "{}".format(self.get_link_visual_name(link))}
         origin_v = SubElement(visual, "origin")
-        origin_v.attrib = {"xyz": "{} {} {}".format(self.get_mesh_origin(link)[0], self.get_mesh_origin(link)[1], self.get_mesh_origin(link)[2]),
-                        "rpy": "{} {} {}".format(self.get_mesh_origin(link)[3], self.get_mesh_origin(link)[4], self.get_mesh_origin(link)[5])}
+        origin_v.attrib = {"xyz": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(self.get_mesh_origin(link)[0], self.get_mesh_origin(link)[1], self.get_mesh_origin(link)[2], dec = dec),
+                        "rpy": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(self.get_mesh_origin(link)[3], self.get_mesh_origin(link)[4], self.get_mesh_origin(link)[5], dec = dec)}
         geometry_v = SubElement(visual, "geometry")
         mesh_v = SubElement(geometry_v, "mesh")
         mesh_v.attrib = {"filename": self.get_link_visual_geo(link), "scale": "0.001 0.001 0.001"}
@@ -84,8 +86,8 @@ class URDF():
         collision = SubElement(link_ele, "collision")
         collision.attrib = {"name": "{}".format(self.get_link_collision_name(link))}
         origin_c = SubElement(collision, "origin")
-        origin_c.attrib = {"xyz": "{} {} {}".format(self.get_mesh_origin(link)[0], self.get_mesh_origin(link)[1], self.get_mesh_origin(link)[2]),
-                        "rpy": "{} {} {}".format(self.get_mesh_origin(link)[3], self.get_mesh_origin(link)[4], self.get_mesh_origin(link)[5])}
+        origin_c.attrib = {"xyz": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(self.get_mesh_origin(link)[0], self.get_mesh_origin(link)[1], self.get_mesh_origin(link)[2], dec = dec),
+                        "rpy": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(self.get_mesh_origin(link)[3], self.get_mesh_origin(link)[4], self.get_mesh_origin(link)[5], dec = dec)}
         geometry_c = SubElement(collision, "geometry")
         mesh_c = SubElement(geometry_c, "mesh")
         mesh_c.attrib = {"filename": self.get_link_collision_geo(link), "scale": "0.001 0.001 0.001"}
@@ -99,14 +101,16 @@ class URDF():
         joint_ele: Element
             xml elements contains informations for joint
         """
+        dec = constants.get_precision_constant()
+
         joint_ele = Element("joint")
         joint_ele.attrib = {"name": self.get_joint_name(joint),
                             "type": self.get_joint_type(joint)}
         
         # add joint origin element
         origin = SubElement(joint_ele, "origin")
-        origin.attrib = {"xyz": "{} {} {}".format(self.get_joint_origin(joint)[0], self.get_joint_origin(joint)[1], self.get_joint_origin(joint)[2]),
-                        "rpy": "{} {} {}".format(self.get_joint_origin(joint)[3], self.get_joint_origin(joint)[4], self.get_joint_origin(joint)[5])}
+        origin.attrib = {"xyz": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(self.get_joint_origin(joint)[0], self.get_joint_origin(joint)[1], self.get_joint_origin(joint)[2], dec = dec),
+                        "rpy": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(self.get_joint_origin(joint)[3], self.get_joint_origin(joint)[4], self.get_joint_origin(joint)[5], dec = dec)}
         
         # add parent and child element
         parent = SubElement(joint_ele, "parent")
@@ -118,17 +122,17 @@ class URDF():
         axis = self.get_joint_axis(joint)
         if axis is not None:
             axis_ele = SubElement(joint_ele, "axis")
-            axis_ele.attrib = {"xyz": "{} {} {}".format(axis[0], axis[1], axis[2])}
+            axis_ele.attrib = {"xyz": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(axis[0], axis[1], axis[2], dec = dec)}
 
         # add limits
         limit = self.get_joint_limit(joint)
         if limit is not None:
             limit_ele = SubElement(joint_ele, "limit")
-            limit_ele.attrib = {"lower": "{}".format(limit[0]),
-                                "upper": "{}".format(limit[1]),
-                                "effort": "{}".format(limit[2]),
-                                "velocity": "{}".format(limit[3])}
-        
+            limit_ele.attrib = {"lower": "{:.{dec}f}".format(limit[0], dec = dec),
+                                "upper": "{:.{dec}f}".format(limit[1], dec = dec),
+                                "effort": "{:.{dec}f}".format(limit[2], dec = dec),
+                                "velocity": "{:.{dec}f}".format(limit[3], dec = dec)}
+
         return joint_ele
 
     def get_robot_ele(self, ):
@@ -760,6 +764,9 @@ def get_link_element(link: Link) -> Element:
     link_ele: Element
         xml elements contains informations for link
     """
+
+    dec = constants.get_precision_constant()
+
     # create a link element
     link_ele = Element("link")
     link_ele.attrib = {"name": get_link_name(link)}
@@ -767,24 +774,24 @@ def get_link_element(link: Link) -> Element:
     # add inertia sub-element
     inertial = SubElement(link_ele, "inertial")
     origin = SubElement(inertial, "origin")
-    origin.attrib = {"xyz": "{} {} {}".format(get_link_inertial_origin(link)[0], get_link_inertial_origin(link)[1], get_link_inertial_origin(link)[2]),
-                     "rpy": "{} {} {}".format(get_link_inertial_origin(link)[3], get_link_inertial_origin(link)[4], get_link_inertial_origin(link)[5])}
+    origin.attrib = {"xyz": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(get_link_inertial_origin(link)[0], get_link_inertial_origin(link)[1], get_link_inertial_origin(link)[2], dec = dec),
+                     "rpy": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(get_link_inertial_origin(link)[3], get_link_inertial_origin(link)[4], get_link_inertial_origin(link)[5], dec = dec)}
     mass = SubElement(inertial, "mass")
-    mass.attrib = {"value": "{}".format(get_link_mass(link))}
+    mass.attrib = {"value": "{:.{dec}f}".format(get_link_mass(link), dec = dec)}
     inertia = SubElement(inertial, "inertia")
-    inertia.attrib = {"ixx": "{}".format(get_link_inertia(link)[0]),
-                      "iyy": "{}".format(get_link_inertia(link)[1]),
-                      "izz": "{}".format(get_link_inertia(link)[2]),
-                      "ixy": "{}".format(get_link_inertia(link)[3]),
-                      "iyz": "{}".format(get_link_inertia(link)[4]),
-                      "ixz": "{}".format(get_link_inertia(link)[5])}
+    inertia.attrib = {"ixx": "{:.{dec}f}".format(get_link_inertia(link)[0], dec = dec),
+                      "iyy": "{:.{dec}f}".format(get_link_inertia(link)[1], dec = dec),
+                      "izz": "{:.{dec}f}".format(get_link_inertia(link)[2], dec = dec),
+                      "ixy": "{:.{dec}f}".format(get_link_inertia(link)[3], dec = dec),
+                      "iyz": "{:.{dec}f}".format(get_link_inertia(link)[4], dec = dec),
+                      "ixz": "{:.{dec}f}".format(get_link_inertia(link)[5], dec = dec)}
     
     # add visual sub-element
     visual = SubElement(link_ele, "visual")
     visual.attrib = {"name": "{}".format(get_link_visual_name(link))}
     origin_v = SubElement(visual, "origin")
-    origin_v.attrib = {"xyz": "{} {} {}".format(get_mesh_origin(link)[0], get_mesh_origin(link)[1], get_mesh_origin(link)[2]),
-                       "rpy": "{} {} {}".format(get_mesh_origin(link)[3], get_mesh_origin(link)[4], get_mesh_origin(link)[5])}
+    origin_v.attrib = {"xyz": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(get_mesh_origin(link)[0], get_mesh_origin(link)[1], get_mesh_origin(link)[2], dec = dec),
+                       "rpy": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(get_mesh_origin(link)[3], get_mesh_origin(link)[4], get_mesh_origin(link)[5], dec = dec)}
     geometry_v = SubElement(visual, "geometry")
     mesh_v = SubElement(geometry_v, "mesh")
     mesh_v.attrib = {"filename": get_link_visual_geo(link), "scale": "0.001 0.001 0.001"}
@@ -793,8 +800,8 @@ def get_link_element(link: Link) -> Element:
     collision = SubElement(link_ele, "collision")
     collision.attrib = {"name": "{}".format(get_link_collision_name(link))}
     origin_c = SubElement(collision, "origin")
-    origin_c.attrib = {"xyz": "{} {} {}".format(get_mesh_origin(link)[0], get_mesh_origin(link)[1], get_mesh_origin(link)[2]),
-                       "rpy": "{} {} {}".format(get_mesh_origin(link)[3], get_mesh_origin(link)[4], get_mesh_origin(link)[5])}
+    origin_c.attrib = {"xyz": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(get_mesh_origin(link)[0], get_mesh_origin(link)[1], get_mesh_origin(link)[2], dec = dec),
+                       "rpy": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(get_mesh_origin(link)[3], get_mesh_origin(link)[4], get_mesh_origin(link)[5], dec = dec)}
     geometry_c = SubElement(collision, "geometry")
     mesh_c = SubElement(geometry_c, "mesh")
     mesh_c.attrib = {"filename": get_link_collision_geo(link), "scale": "0.001 0.001 0.001"}
@@ -951,15 +958,18 @@ def get_joint_element(joint: Joint) -> Element:
     joint_ele: Element
         xml elements contains informations for joint
     """
+
+    dec = constants.get_precision_constant()
+
     joint_ele = Element("joint")
     joint_ele.attrib = {"name": get_joint_name(joint),
                         "type": get_joint_type(joint)}
     
     # add joint origin element
     origin = SubElement(joint_ele, "origin")
-    origin.attrib = {"xyz": "{} {} {}".format(get_joint_origin(joint)[0], get_joint_origin(joint)[1], get_joint_origin(joint)[2]),
-                     "rpy": "{} {} {}".format(get_joint_origin(joint)[3], get_joint_origin(joint)[4], get_joint_origin(joint)[5])}
-    
+    origin.attrib = {"xyz": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(get_joint_origin(joint)[0], get_joint_origin(joint)[1], get_joint_origin(joint)[2], dec = dec),
+                     "rpy": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(get_joint_origin(joint)[3], get_joint_origin(joint)[4], get_joint_origin(joint)[5], dec = dec)}
+
     # add parent and child element
     parent = SubElement(joint_ele, "parent")
     parent.attrib = {"link": get_link_name(get_joint_parent(joint))}
@@ -970,17 +980,17 @@ def get_joint_element(joint: Joint) -> Element:
     axis = get_joint_axis(joint)
     if axis is not None:
         axis_ele = SubElement(joint_ele, "axis")
-        axis_ele.attrib = {"xyz": "{} {} {}".format(axis[0], axis[1], axis[2])}
+        axis_ele.attrib = {"xyz": "{:.{dec}f} {:.{dec}f} {:.{dec}f}".format(axis[0], axis[1], axis[2], dec = dec)}
 
     # add limits
     limit = get_joint_limit(joint)
     if limit is not None:
         limit_ele = SubElement(joint_ele, "limit")
-        limit_ele.attrib = {"lower": "{}".format(limit[0]),
-                            "upper": "{}".format(limit[1]),
-                            "effort": "{}".format(limit[2]),
-                            "velocity": "{}".format(limit[3])}
-    
+        limit_ele.attrib = {"lower": "{:.{dec}f}".format(limit[0], dec = dec),
+                            "upper": "{:.{dec}f}".format(limit[1], dec = dec),
+                            "effort": "{:.{dec}f}".format(limit[2], dec = dec),
+                            "velocity": "{:.{dec}f}".format(limit[3], dec = dec)}
+
     return joint_ele
 
 def get_urdf(joint: Joint, link: Link) -> Element:
