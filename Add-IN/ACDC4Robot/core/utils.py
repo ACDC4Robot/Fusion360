@@ -20,7 +20,7 @@ def get_valid_filename(s):
     # Remove the number at the end of the full path name
     s = re.sub(r':.*$', '', s)
 
-    s = str(s).strip().replace(' ', '-')
+    s = str(s).strip().replace(' ', '_')
     return re.sub(r'(?u)[^-\w.]', '', s)
 
 def error_box(message: str):

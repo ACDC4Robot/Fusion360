@@ -8,6 +8,14 @@ AUTHOR_NAME = "" # author name in model.config
 MODEL_DESCRIPTION = "" # model description in model.config
 ROBOT_DESCRIPTION_FORMAT = "" # robot description format such as urdf, sdf, mjcf, etc.
 SIMULATION_ENVIRONMENT = "" # simulation environment such as Gazebo, PyBullet, MuJoCo, etc.
+PRECISION_CONSTANT  = 6 # number of decimal places for exporting float numbers
+
+def set_precision_constant(precision_constant: int):
+    global PRECISION_CONSTANT
+    PRECISION_CONSTANT = precision_constant
+
+def get_precision_constant():
+    return PRECISION_CONSTANT
 
 def set_sdf_file_dir(sdf_file_dir: str):
     global SDF_FILE_DIR
