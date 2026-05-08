@@ -33,12 +33,14 @@ def get_link_joint_list(design: adsk.fusion.Design):
     # try to solve the nested components problem
     # but still not fully tested
     for occ in occs:
+        if not utils.component_has_bodies(occ.component):
+            continue
         # TODO: it seems use occ.joints.count will make it usable with occurrences? Test it
         if occ.component.joints.count > 0:
             # textPalette.writeText(str(occ.fullPathName))
             continue
         else:
-            # Only occurrence contains zero joint and has zero childOccurrences 
+            # Only occurrence contains zero joint and has zero childOccurrences
             # can be seen as a link
             if occ.childOccurrences.count > 0:
                 # textPalette.writeText(str(occ.fullPathName))
@@ -52,6 +54,8 @@ def get_link_joint_list(design: adsk.fusion.Design):
                     link_list.append(Link(occ)) # add link objects into link_list
 
     for joint in root.allJoints:
+        joint_list.append(Joint(joint)) # add joint objects into joint_list
+    for joint in root.allAsBuiltJoints:
         joint_list.append(Joint(joint)) # add joint objects into joint_list
 
     return link_list, joint_list
@@ -134,9 +138,6 @@ def run():
     constants.set_text_palette(textPalette)
 
     try:
-        # Set design type into do not capture design history
-        design.designType = adsk.fusion.DesignTypes.DirectDesignType
-
         # # Check the length unit of Fusion360
         # if design.unitsManager.defaultLengthUnits != "m":
         #     ui.messageBox("Please set length unit to 'm'!", msg_box_title)
@@ -177,29 +178,15 @@ def run():
             if simulator  == "None":
                 ui.messageBox("Simulation environment is None.\n" +
                               "Please select a simulation environment.", msg_box_title)
-            elif simulator == "Gazebo":
-                # write to .urdf file
-                write.write_urdf(link_list, joint_list, save_folder, robot_name)
-                # export mesh files
-                export_stl(design, save_folder, link_list)
-                ui.messageBox("Finished exporting URDF for Gazebo.", msg_box_title)
-                
-            elif simulator == "PyBullet":
+            elif simulator in ["Gazebo", "PyBullet", "MuJoCo"]:
                 # write to .urdf file
                 write.write_urdf(link_list, joint_list, save_folder, robot_name)
                 # export mesh files
                 export_stl(design, save_folder, link_list)
                 # generate pybullet script
-                write.write_hello_pybullet(rdf, robot_name, save_folder)
-                ui.messageBox("Finished exporting URDF for PyBullet.", msg_box_title)
-            
-            elif simulator == "MuJoCo":
-                # write to .urdf file
-                write.write_urdf(link_list, joint_list, save_folder, robot_name)
-                # export mesh files
-                export_stl(design, save_folder, link_list)
-                
-                ui.messageBox("Finished exporting URDF for MuJoCo.", msg_box_title)
+                if simulator == 'PyBullet':
+                    write.write_hello_pybullet(rdf, robot_name, save_folder)
+                ui.messageBox(f"Finished exporting URDF for {simulator}.", msg_box_title)
 
         elif rdf == "SDFormat":
             if simulator == "None":

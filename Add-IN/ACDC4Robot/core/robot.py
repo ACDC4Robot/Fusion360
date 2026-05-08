@@ -3,6 +3,7 @@ from typing import List, Tuple
 import adsk, adsk.fusion, adsk.core
 from .link import Link
 from .joint import Joint
+from . import utils
 
 class Robot():
     """
@@ -31,6 +32,8 @@ class Robot():
         # try to solve the nested components problem
         # but still not fully tested
         for occ in occs:
+            if not utils.component_has_bodies(occ.component):
+                continue
             # TODO: it seems use occ.joints.count will make it usable with occurrences? Test it
             if occ.component.joints.count > 0:
                 # textPalette.writeText(str(occ.fullPathName))
@@ -55,6 +58,8 @@ class Robot():
         joint_list = []
 
         for joint in self.rootComp.allJoints:
+            joint_list.append(Joint(joint)) # add joint objects into joint_list
+        for joint in self.rootComp.allAsBuiltJoints:
             joint_list.append(Joint(joint)) # add joint objects into joint_list
         
         return joint_list

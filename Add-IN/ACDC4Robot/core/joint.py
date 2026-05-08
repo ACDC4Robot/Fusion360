@@ -4,22 +4,28 @@ Get informations about joints from Fusion360 API
 
 """
 
+from typing import Union
 import adsk, adsk.fusion, adsk.core
 from xml.etree.ElementTree import ElementTree, Element, SubElement
+from ..commands.ACDC4Robot import constants
 from . import utils
 from . import math_operation as math_op
-# from .link import Link
 
 class Joint():
     """
     Joint class for joint
     """
 
-    def __init__(self, joint: adsk.fusion.Joint) -> None:
+    def __init__(self, joint: Union[adsk.fusion.Joint, adsk.fusion.AsBuiltJoint]) -> None:
         self.joint = joint
         self.name = joint.name
-        self.parent = joint.occurrenceTwo # parent link of joint
-        self.child = joint.occurrenceOne
+        try:
+            self.parent = joint.occurrenceTwo # parent link of joint
+            self.child = joint.occurrenceOne
+        except Exception as e:
+            textPalette: adsk.core.Palette = constants.get_text_palette()
+            textPalette.writeText(f"Invalid joint: {joint.name}: {str(e)}")
+            pass
         # self.parent = Link(joint.occurrenceTwo) # parent link of joint
         # self.child = Link(joint.occurrenceOne)
 
@@ -36,6 +42,19 @@ class Joint():
         # output name is consistent with the name in Fusion
         name = utils.get_valid_filename(self.name)
         return name
+
+    def get_full_path_name(self):
+        """
+        Return:
+        path: str
+            The joint name and parent component path
+        """
+        # joint names inside each occurrence are identical
+        # but joint names in different occurrences can be the same, in which makes conflict
+        if self.child:
+            child_name = utils.get_valid_filename(self.child.fullPathName)
+            return f"{child_name}_{self.get_name()}"
+        return self.get_name()
 
     def get_parent(self):
         """
@@ -58,6 +77,18 @@ class Joint():
             child_name = utils.get_valid_filename(self.child.fullPathName)
 
         return child_name
+
+    def has_origin(self) -> bool:
+        """
+        Checks if the join has a parent origin geometry
+        Return: bool
+        """
+        if hasattr(self.joint, 'geometry'):
+            return self.joint.geometry is not None
+        elif self.joint.geometryOrOriginTwo == adsk.fusion.JointOrigin:
+            return self.joint.geometryOrOriginTwo.geometry is not None
+        else:
+            return self.joint.geometryOrOriginTwo.origin is not None
 
     def get_sdf_joint_type(self) -> str:
         """
@@ -144,7 +175,9 @@ class Joint():
         # I guess using child joint origin works just because they coincide together for all the text examples
 
         # get parent joint origin as the child joint
-        if self.joint.geometryOrOriginTwo == adsk.fusion.JointOrigin:
+        if hasattr(self.joint, 'geometry'):
+            w_P_Jc = self.joint.geometry.origin.asArray()
+        elif self.joint.geometryOrOriginTwo == adsk.fusion.JointOrigin:
             w_P_Jc = self.joint.geometryOrOriginTwo.geometry.origin.asArray()
         else:
             w_P_Jc = self.joint.geometryOrOriginTwo.origin.asArray()
@@ -182,17 +215,24 @@ class Joint():
             translation unit: cm
         """
         # get parent joint origin's coordinate w.r.t world frame
-        if self.joint.geometryOrOriginTwo == adsk.fusion.JointOrigin:
-            w_P_J = self.joint.geometryOrOriginTwo.geometry.origin.asArray()
+        if hasattr(self.joint, 'geometry'):
+            geometry: adsk.fusion.JointGeometry = self.joint.geometry
+            if geometry is None:
+                return None
+            w_P_J = geometry.origin.asArray()
         else:
-            w_P_J = self.joint.geometryOrOriginTwo.origin.asArray()
+            geometry: adsk.fusion.JointOrigin = self.joint.geometryOrOriginTwo
+            if self.joint.geometryOrOriginTwo == adsk.fusion.JointOrigin:
+                w_P_J = geometry.geometry.origin.asArray()
+            else:
+                w_P_J = geometry.origin.asArray()
 
         w_P_J = [round(i, 6) for i in w_P_J]
         
         # no matter jointGeometry or jointOrigin object, both have these properties
-        zAxis: adsk.core.Vector3D = self.joint.geometryOrOriginTwo.primaryAxisVector
-        xAxis: adsk.core.Vector3D = self.joint.geometryOrOriginTwo.secondaryAxisVector
-        yAxis: adsk.core.Vector3D = self.joint.geometryOrOriginTwo.thirdAxisVector
+        zAxis: adsk.core.Vector3D = geometry.primaryAxisVector
+        xAxis: adsk.core.Vector3D = geometry.secondaryAxisVector
+        yAxis: adsk.core.Vector3D = geometry.thirdAxisVector
 
         origin = adsk.core.Point3D.create(w_P_J[0], w_P_J[1], w_P_J[2])
 

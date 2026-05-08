@@ -283,44 +283,6 @@ def get_joint_type(joint: Joint) -> str:
         pass
     return sdf_joint_type
 
-def get_joint_pose(joint: Joint) -> list[float]:
-    """
-    Return
-    ---------
-    joint_pose: [x, y, z, roll, pitch, yaw]
-        From: http://sdformat.org/tutorials?tut=spec_model_kinematics&cat=specification&#jointpose
-        For a joint with parent link frame `P` and child link frame `C`, 
-        the joint `<pose>` tag specifies the pose `X_CJc` of a joint frame `Jc` rigidly attached to the child link.
-    """
-    # get parent joint origin's coordinate w.r.t world frame
-    # get parent joint origin as the child joint frame
-    # NOTE: joint origin is a concept in Fusion360
-    if joint.joint.geometryOrOriginTwo == adsk.fusion.JointOrigin:
-        w_P_Jc = joint.joint.geometryOrOriginTwo.geometry.origin.asArray()
-    else:
-        w_P_Jc = joint.joint.geometryOrOriginTwo.origin.asArray()
-
-    # convert from cm to m
-    w_P_Jc = [round(i*0.01, 6) for i in w_P_Jc] 
-    # get child link frame's origin point w.r.t world frame
-    w_P_Lc = [joint.child.transform2.translation.x * 0.01, 
-                joint.child.transform2.translation.y * 0.01,
-                joint.child.transform2.translation.z * 0.01,]
-    # vector from child link frame's origin point to child joint origin point w.r.t world frame
-    w_V_LcJc = [[w_P_Jc[0]-w_P_Lc[0]],
-                [w_P_Jc[1]-w_P_Lc[1]],
-                [w_P_Jc[2]-w_P_Lc[2]]] # 3*1 vector
-
-    w_T_Lc = joint.child.transform2 # configuration of child-link-frame w.r.t world-frame w
-    w_R_Lc = math_op.get_rotation_matrix(w_T_Lc) # rotation matrix of child-link-frame w.r.t world-frame w
-    Lc_R_w = math_op.matrix_transpose(w_R_Lc) # rotation matrix of world-frame w.r.t child-link-frame Lc
-    # vector from child link frame's origin point to child joint origin point w.r.t child-link-frame Lc
-    Lc_V_LcJc = math_op.change_orientation(Lc_R_w, w_V_LcJc) # 3*1 array
-    # assume the joint frame has the same oritation as child link frame
-    # it seems that rpy of joint doesn't matter, so set them as 0
-    sdf_origin = [Lc_V_LcJc[0][0], Lc_V_LcJc[1][0], Lc_V_LcJc[2][0], 0.0, 0.0, 0.0]
-
-    return sdf_origin
 
 def get_joint_parent(joint: Joint) -> Link:
     """
@@ -417,9 +379,10 @@ def get_joint_element(joint: Joint) -> list[float]:
     joint_ele = Element("joint")
     joint_ele.attrib = {"name": get_joint_name(joint), "type": get_joint_type(joint)}
     pose = SubElement(joint_ele, "pose")
-    pose.text = "{} {} {} {} {} {}".format(get_joint_pose(joint)[0], get_joint_pose(joint)[1],
-                                           get_joint_pose(joint)[2], get_joint_pose(joint)[3],
-                                           get_joint_pose(joint)[4], get_joint_pose(joint)[5])
+    poseValues = joint.get_sdf_origin()
+    pose.text = "{} {} {} {} {} {}".format(poseValues[0], poseValues[1],
+                                           poseValues[2], poseValues[3],
+                                           poseValues[4], poseValues[5])
     parent = SubElement(joint_ele, "parent")
     parent.text = "{}".format(get_joint_parent(joint).get_name())
     child = SubElement(joint_ele, "child")

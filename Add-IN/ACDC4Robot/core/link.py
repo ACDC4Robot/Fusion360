@@ -14,10 +14,10 @@ from . import math_operation as math_op
 # TODO: support for external component
 
 class Link():
-    """ 
+    """
     Data abstruction for link element
     with some methods to access commonly used information
-    
+
     Attributes:
         link: adsk.fusion.Occurrence
             occurrence in Fusion360 refers to linkage
@@ -40,13 +40,13 @@ class Link():
         """
         # TODO: maybe this is a better and accurate way for this, not test
         # self.link = occurrence.createForAssemblyContext(occurrence)
-        
+
         self.link: adsk.fusion.Occurrence = occurrence
         self.name = None
         # pose can have two meanings:
         # 1. the homogeneous matrix of link-frame L w.r.t world-frame w
         # 2. the coordinates of link-frame L
-        self.pose: adsk.core.Matrix3D = occurrence.transform2 
+        self.pose: adsk.core.Matrix3D = occurrence.transform2
         self.phyPro = occurrence.getPhysicalProperties(adsk.fusion.CalculationAccuracy.VeryHighCalculationAccuracy)
 
     def get_link_occ(self) -> adsk.fusion.Occurrence:
@@ -56,6 +56,14 @@ class Link():
             occurrence the link instance referenced
         """
         return self.link
+
+    def is_visible(self) -> bool:
+        """
+        Check if the occurrence has the light bulb on
+        Return:
+        bool
+        """
+        return self.link.isLightBulbOn
 
     def get_parent_joint(self) -> adsk.fusion.Joint:
         """
@@ -69,18 +77,14 @@ class Link():
         # TODO: in closed loop mechanism, there exits one assembly method that
         # make one link have two parent joint, write a instruction or fix this bug
         # text_palette = constants.get_text_palette()
-        joint_list: adsk.fusion.JointList = self.link.joints
-        # text_palette.writeText("Link: {}".format(self.get_name()))
-        for j in joint_list:
-            # text_palette.writeText("Joint list item: {}".format(j.name))
-            # text_palette.writeText("Joint's child link: {}".format(j.occurrenceOne.fullPathName))
-            if j.occurrenceOne == self.link:
-                # text_palette.writeText("Return j type: {}".format(j.objectType))
-                return j
-            else:
-                continue
-
-        # text_palette.writeText("Return a None")
+        app = adsk.core.Application.get()
+        root = adsk.fusion.Design.cast(app.activeProduct).rootComponent
+        for joint in root.allJoints:
+            if joint.occurrenceOne == self.link:
+                return joint
+        for join in root.allAsBuiltJoints:
+            if join.occurrenceOne == self.link:
+                return join
         return None
 
     def get_name(self) -> str:
@@ -144,7 +148,7 @@ class Link():
         inertia_tensor = [[com_ixx, com_ixy, com_ixz],
                           [com_ixy, com_iyy, com_iyz],
                           [com_ixz, com_iyz, com_izz]]
-        
+
         # moments of inertia has the same orientation of L-frame
         I = math_op.matrix_multi(math_op.matrix_multi(R_T, inertia_tensor), R)
         # I = math_op.matrix_multi(math_op.matrix_multi(R, inertia_tensor), R_T)
@@ -157,13 +161,13 @@ class Link():
         ixz = I[0][2]
 
         return [ixx, iyy, izz, ixy, iyz, ixz] # unit: kg*m^2
-    
+
     def get_initia_urdf(self):
         """
         Return [ixx, iyy, izz, ixy, iyz, ixz]
         the inertia tensor elements of the link w.r.t the CoM frame C
         CoM frame C has the same orientation with the parent frame
-        
+
         Return:
         ---------
         list: [ixx, iyy, izz, ixy, iyz, ixz]
@@ -186,7 +190,7 @@ class Link():
         inertia_tensor = [[com_ixx, com_ixy, com_ixz],
                           [com_ixy, com_iyy, com_iyz],
                           [com_ixz, com_iyz, com_izz]]
-        
+
         # get the parent frame
         parent_joint = self.get_parent_joint()
         # parent frame for a link has parent joint, is the parent joint frame
@@ -220,7 +224,7 @@ class Link():
         ixz = I[0][2]
 
         return [ixx, iyy, izz, ixy, iyz, ixz] # unit: kg*m^2
-    
+
     def get_inertia_mjcf(self) -> list:
         """
         Get inertia tensor as mjcf's body subelement
@@ -261,7 +265,7 @@ class Link():
         yaw = 0.0
         w_CoM_x = self.phyPro.centerOfMass.x # point CoM's x coordinate w.r.t world-frame
         w_CoM_y = self.phyPro.centerOfMass.y
-        w_CoM_z = self.phyPro.centerOfMass.z 
+        w_CoM_z = self.phyPro.centerOfMass.z
         w_Lo_x = self.pose.translation.x    # link-frame's origin point's x coordinat w.r.t world-frame
         w_Lo_y = self.pose.translation.y
         w_Lo_z = self.pose.translation.z
@@ -274,7 +278,7 @@ class Link():
 
         L_Lo_CoM = math_op.change_orientation(L_R_w, w_Lo_CoM)
         pose_CoM = [L_Lo_CoM[0][0], L_Lo_CoM[1][0], L_Lo_CoM[2][0], roll, pitch, yaw]
-        
+
         return pose_CoM
 
     def get_CoM_sdf(self):
@@ -286,16 +290,16 @@ class Link():
             Center-of-mass frame C relative to the link-frame L
         """
         # TODO: to avoid compatibility issues associated with the negative sign convention for product
-        # of inertia, align CoM frame C's axes to the principal inertia directions, so that all the 
+        # of inertia, align CoM frame C's axes to the principal inertia directions, so that all the
         # products of inertia are zero
-        
+
         # Let the orientation of center-of-mass frame C is same as link-frame L
         roll = 0.0
         pitch = 0.0
         yaw = 0.0
         w_CoM_x = self.phyPro.centerOfMass.x # point CoM's x coordinate w.r.t world-frame
         w_CoM_y = self.phyPro.centerOfMass.y
-        w_CoM_z = self.phyPro.centerOfMass.z 
+        w_CoM_z = self.phyPro.centerOfMass.z
         w_Lo_x = self.pose.translation.x    # link-frame's origin point's x coordinat w.r.t world-frame
         w_Lo_y = self.pose.translation.y
         w_Lo_z = self.pose.translation.z
@@ -308,9 +312,9 @@ class Link():
 
         L_Lo_CoM = math_op.change_orientation(L_R_w, w_Lo_CoM)
         pose_CoM = [L_Lo_CoM[0][0], L_Lo_CoM[1][0], L_Lo_CoM[2][0], roll, pitch, yaw]
-        
+
         return pose_CoM
-    
+
     def get_CoM_urdf(self):
         """
         Get CoM frame w.r.t link frame in [x, y, z, roll, pitch, yaw] representation
@@ -331,10 +335,10 @@ class Link():
             parent_joint_frame: adsk.core.Matrix3D = joint.get_joint_frame()
             from_origin, from_xAxis, from_yAxis, from_zAxis = parent_joint_frame.getAsCoordinateSystem()
             textPalette.writeText("Parent joint frame: \n"+math_op.matrix3D_to_str(parent_joint_frame))
-            
+
             w_CoM_x = self.phyPro.centerOfMass.x # point CoM's x coordinate w.r.t world-frame
             w_CoM_y = self.phyPro.centerOfMass.y
-            w_CoM_z = self.phyPro.centerOfMass.z 
+            w_CoM_z = self.phyPro.centerOfMass.z
 
             # Let the CoM-frame C has the same orientation with parent link frame
             CoM_frame_O: adsk.core.Point3D = adsk.core.Point3D.create()
@@ -348,7 +352,7 @@ class Link():
             textPalette.writeText("CoM frame: \n" + math_op.matrix3D_to_str(CoM_frame))
 
             transform = adsk.core.Matrix3D.create()
-            # transform.setToAlignCoordinateSystems(from_origin, from_xAxis, from_yAxis, from_zAxis, 
+            # transform.setToAlignCoordinateSystems(from_origin, from_xAxis, from_yAxis, from_zAxis,
             #                                     to_origin, to_xAsix, to_yAxis, to_zAxis)
             transform = math_op.coordinate_transform(parent_joint_frame, CoM_frame)
             textPalette.writeText("Transform matrix: \n" + math_op.matrix3D_to_str(transform))
@@ -356,44 +360,6 @@ class Link():
             pose_CoM = math_op.matrix3d_2_pose(transform)
 
         return pose_CoM
-    
-    def get_mesh_origin(self):
-        """
-        Fusion360 returns the mesh file with the same coordinate frame as the reference occurrence, which is the link fram L
-        So the mesh origin transforms the parent-joint frame J to the link-frame L
-        this is used for the mesh element of visual and collision in URDF
-        Return:
-        ---------
-        mesh_orign: list
-            [x, y, z, roll, pitch, yaw]
-        """
-        if self.get_parent_joint() is None:
-            # for the first link which does not have parent joint
-            # haven't found the reference about how to define the mesh origin
-            # it might be w.r.t world frame or link frame
-            # here let it be w.r.t link frame, which coincide with the link frame
-            mesh_origin = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            # transform = self.pose
-            # mesh_origin = math_op.matrix3d_2_pose(transform)
-        else:
-            joint = Joint(self.get_parent_joint())
-            parent_joint_frame: adsk.core.Matrix3D = joint.get_joint_frame()
-            textPalette: adsk.core.Palette = constants.get_text_palette()
-            textPalette.writeText("Parent joint frame: \n"+math_op.matrix3D_to_str(parent_joint_frame))
-            # link frame coincides with the mesh's frame
-            link_frame: adsk.core.Matrix3D = self.pose
-            textPalette.writeText("Link frame: \n" + math_op.matrix3D_to_str(link_frame))
-            from_origin, from_xAxis, from_yAxis, from_zAxis = parent_joint_frame.getAsCoordinateSystem()
-            to_origin, to_xAsix, to_yAxis, to_zAxis = link_frame.getAsCoordinateSystem()
-
-            transform = adsk.core.Matrix3D.create()
-            # transform.setToAlignCoordinateSystems(from_origin, from_xAxis, from_yAxis, from_zAxis, 
-            #                                     to_origin, to_xAsix, to_yAxis, to_zAxis)
-            transform = math_op.coordinate_transform(parent_joint_frame, link_frame)
-            # textPalette.writeText("Transform matrix: \n" + math_op.matrix3D_to_str(transform))
-            mesh_origin = math_op.matrix3d_2_pose(transform)
-
-        return mesh_origin
 
     def get_collision_sdf(self):
         """
@@ -409,7 +375,7 @@ class Link():
         robot_name = constants.get_robot_name()
         geometry_uri = "model://" + robot_name + "/meshes/" + str(self.get_name()) + ".stl"
         return col_name, geometry_uri
-    
+
     def get_collision_urdf(self):
         """
         Get colision info for urdf collision element
@@ -438,7 +404,7 @@ class Link():
         robot_name = constants.get_robot_name()
         geometry_uri = "model://" + robot_name + "/meshes/" + str(self.get_name()) + ".stl"
         return visual_name, geometry_uri
-    
+
     def get_visual_urdf(self):
         """
         Return:
@@ -451,7 +417,7 @@ class Link():
         # mesh_loc = "package://" + robot_name + "/meshes/" + self.get_name() + ".stl"
         mesh_loc = "meshes/" + self.get_name() + ".stl"
         return visual_name, mesh_loc
-    
+
     def get_visual_body(self) -> adsk.fusion.BRepBody:
         """
         get body that contains 'visual' in its name
@@ -467,15 +433,15 @@ class Link():
             if b_name.find('visual') != -1:
                 visual_geo: adsk.fusion.BRepBody = body
                 return visual_geo
-        
+
         return None
-    
+
     def get_collision_body(self) -> adsk.fusion.BRepBody:
         """
         get body that contains 'collision' in its name
         which means they are used as collision geometry
 
-        Return: 
+        Return:
         col_geo: BRepBody
             the body represents collision geometry
         None
@@ -485,5 +451,5 @@ class Link():
             if b_name.find('collision') != -1:
                 col_geo: adsk.fusion.BRepBody = body
                 return col_geo
-        
+
         return None

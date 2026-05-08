@@ -161,6 +161,13 @@ def get_mjcf_joint(joint: Joint) -> Element:
         joint_ele.attrib = {"name": name_att, "type": joint_type, 
                             "axis": "{} {} {}".format(axis[0], axis[1], axis[2]),
                             "pos": "{} {} {}".format(pose[0], pose[1], pose[2])}
+
+
+        limits = joint.get_limits()
+        if limits is not None:
+            lower, upper = limits
+            joint_ele.attrib["range"] = "{} {}".format(lower, upper)
+            joint_ele.attrib["limited"] = "true"
         return joint_ele
     else:
         return None
@@ -206,13 +213,14 @@ def get_mjcf(root_comp: adsk.fusion.Component, robot_name: str, dir: str) -> Ele
 
     # add body elements to construct a robot
     parent_child_dict = {}
-    joints = root_comp.allJoints
     all_occs = root_comp.allOccurrences
 
+    joints = [j for j in root_comp.allJoints] + [j for j in root_comp.allAsBuiltJoints]
     for joint in joints:
         parent = joint.occurrenceTwo
         child = joint.occurrenceOne
-
+        if parent is None:
+            continue
         if parent.fullPathName not in parent_child_dict:
             parent_child_dict[parent.fullPathName] = []
 
@@ -236,6 +244,8 @@ def get_mjcf(root_comp: adsk.fusion.Component, robot_name: str, dir: str) -> Ele
     
     # traverse all the occs for body elements
     for occ in all_occs:
+        if not occ.isLightBulbOn or not utils.component_has_bodies(occ.component):
+            continue
         asset_ele.append(get_mjcf_mesh(Link(occ)))
         if occ.fullPathName not in [item.fullPathName for sublist in parent_child_dict.values() for item in sublist]:
             # parent_ele = ET.SubElement(worldbody_ele, "body", name=Link(occ).get_name())

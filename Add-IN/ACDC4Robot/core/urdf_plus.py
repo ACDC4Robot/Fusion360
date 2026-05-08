@@ -37,7 +37,8 @@ class URDF_PLUS(URDF):
         
         for joint in self.tree_joints:
             joint_ele = self.get_tree_joint_element(joint)
-            robot_ele.append(joint_ele)
+            if joint_ele is not None:
+                robot_ele.append(joint_ele)
 
         for loop in self.loop_joints:
             loop_ele = self.get_loop_joint_element(loop)

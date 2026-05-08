@@ -74,7 +74,8 @@ def write_urdf(link_list: list[Link], joint_list: list[Joint], dir: str, robot_n
     for joint in joint_list:
         # joint_ele = joint.get_joint_urdf_element()
         joint_ele = URDF.get_joint_element(joint)
-        robot_ele.append(joint_ele)
+        if joint_ele is not None:
+            robot_ele.append(joint_ele)
 
     # set indent to pretty the xml output
     ET.indent(urdf_tree, space="    ", level=0)
