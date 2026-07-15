@@ -11,6 +11,7 @@ from ...core.joint import Joint
 from . import constants
 from ...core import write
 from ...core import utils
+from ...core import validation
 from ...core.robot import Robot
 from ...core.urdf_plus import URDF_PLUS
 import time
@@ -74,52 +75,50 @@ def export_stl(design: adsk.fusion.Design, save_dir: str, links: list[Link]):
     # create a single exportManager instance
     export_manager = design.exportManager
     # set the directory for the mesh file
-    try: os.mkdir(save_dir + "/meshes")
-    except: pass
-    mesh_dir = save_dir + "/meshes"
+    mesh_dir = os.path.join(save_dir, "meshes")
+    os.makedirs(mesh_dir, exist_ok=True)
 
     for link in links:
-        visual_body: adsk.fusion.BRepBody = link.get_visual_body()
-        col_body: adsk.fusion.BRepBody = link.get_collision_body()
-        if (visual_body is None) and (col_body is None):
-            # export the whole occurrence
-            mesh_name = mesh_dir + "/" + link.get_name()
-            occ = link.get_link_occ()
-            # obj_export_options = export_manager.createOBJExportOptions(occ, mesh_name)
-            # obj_export_options.unitType = adsk.fusion.DistanceUnits.MillimeterDistanceUnits # set unit to mm
-            # obj_export_options.meshRefinement = adsk.fusion.MeshRefinementSettings.MeshRefinementLow
-            # export_manager.execute(obj_export_options)
-            stl_export_options = export_manager.createSTLExportOptions(occ, mesh_name)
-            stl_export_options.sendToPrintUtility = False
-            stl_export_options.isBinaryFormat = True
-            stl_export_options.meshRefinement = adsk.fusion.MeshRefinementSettings.MeshRefinementLow
-            export_manager.execute(stl_export_options)
-        elif (visual_body is not None) and (col_body is not None):
-            # export visual and collision geometry seperately
-            visual_mesh_name = mesh_dir + "/" + link.get_name() + "_visual"
-            visual_exp_options = export_manager.createSTLExportOptions(visual_body, visual_mesh_name)
-            visual_exp_options.sendToPrintUtility = False
-            visual_exp_options.isBinaryFormat = True
-            visual_exp_options.meshRefinement = adsk.fusion.MeshRefinementSettings.MeshRefinementLow
-            export_manager.execute(visual_exp_options)
+        try:
+            visual_body: adsk.fusion.BRepBody = link.get_visual_body()
+            col_body: adsk.fusion.BRepBody = link.get_collision_body()
+            if (visual_body is None) and (col_body is None):
+                # export the whole occurrence
+                mesh_name = mesh_dir + "/" + link.get_name()
+                occ = link.get_link_occ()
+                stl_export_options = export_manager.createSTLExportOptions(occ, mesh_name)
+                stl_export_options.sendToPrintUtility = False
+                stl_export_options.isBinaryFormat = True
+                stl_export_options.meshRefinement = adsk.fusion.MeshRefinementSettings.MeshRefinementLow
+                export_manager.execute(stl_export_options)
+            elif (visual_body is not None) and (col_body is not None):
+                # export visual and collision geometry seperately
+                visual_mesh_name = mesh_dir + "/" + link.get_name() + "_visual"
+                visual_exp_options = export_manager.createSTLExportOptions(visual_body, visual_mesh_name)
+                visual_exp_options.sendToPrintUtility = False
+                visual_exp_options.isBinaryFormat = True
+                visual_exp_options.meshRefinement = adsk.fusion.MeshRefinementSettings.MeshRefinementLow
+                export_manager.execute(visual_exp_options)
 
-            col_mesh_name = mesh_dir + "/" + link.get_name() + "_collision"
-            col_exp_options = export_manager.createSTLExportOptions(col_body, col_mesh_name)
-            col_exp_options.sendToPrintUtility = False
-            col_exp_options.isBinaryFormat = True
-            col_exp_options.meshRefinement = adsk.fusion.MeshRefinementSettings.MeshRefinementLow
-            export_manager.execute(col_exp_options)
-
-        elif (visual_body is None) and (col_body is not None):
-            error_message = "Please set two bodies, one for visual and one for collision. \n"
-            error_message = error_message + "Body for visual missing."
-            utils.error_box(error_message)
-            utils.terminate_box()
-        elif (visual_body is not None) and (col_body is None):
-            error_message = "Please set two bodies, one for visual and one for collision. \n"
-            error_message = error_message + "Body for collision missing."
-            utils.error_box(error_message)
-            utils.terminate_box()
+                col_mesh_name = mesh_dir + "/" + link.get_name() + "_collision"
+                col_exp_options = export_manager.createSTLExportOptions(col_body, col_mesh_name)
+                col_exp_options.sendToPrintUtility = False
+                col_exp_options.isBinaryFormat = True
+                col_exp_options.meshRefinement = adsk.fusion.MeshRefinementSettings.MeshRefinementLow
+                export_manager.execute(col_exp_options)
+            elif (visual_body is None) and (col_body is not None):
+                error_message = "Please set two bodies, one for visual and one for collision. \n"
+                error_message = error_message + link.get_name() + ": body for visual missing."
+                utils.error_box(error_message)
+                utils.terminate_box()
+            elif (visual_body is not None) and (col_body is None):
+                error_message = "Please set two bodies, one for visual and one for collision. \n"
+                error_message = error_message + link.get_name() + ": body for collision missing."
+                utils.error_box(error_message)
+                utils.terminate_box()
+        except RuntimeError as e:
+            raise RuntimeError("Failed to export the mesh of link '{}': {}".format(
+                link.get_name(), e)) from e
 
 
 def run():
@@ -133,21 +132,41 @@ def run():
     
     # open a text palette for debuging
     textPalette = ui.palettes.itemById("TextCommands")
-    if not textPalette.isVisible:
+    if textPalette is not None and not textPalette.isVisible:
         textPalette.isVisible = True
     constants.set_text_palette(textPalette)
 
     try:
-        # # Check the length unit of Fusion360
-        # if design.unitsManager.defaultLengthUnits != "m":
-        #     ui.messageBox("Please set length unit to 'm'!", msg_box_title)
-        #     return 0 # exit run() function
-        
+        if design is None:
+            ui.messageBox("No active Fusion design found.\n"
+                          "Open a design and run ACDC4Robot again.", msg_box_title)
+            return 0
+
         root = design.rootComponent # get root component
-        allComp = design.allComponents
-        robot_name = root.name.split()[0]
+
+        # names of previous exports must not leak into this run
+        utils.reset_name_registry()
+
+        # sanitize the robot name: the raw document name may contain spaces,
+        # version suffixes or characters that are invalid in file names
+        name_parts = root.name.split()
+        raw_name = name_parts[0] if name_parts else "robot"
+        robot_name = utils.get_valid_filename(raw_name) or "robot"
         constants.set_robot_name(robot_name)
-        
+
+        rdf = constants.get_rdf()
+        simulator = constants.get_sim_env()
+
+        # validate the selected format/simulator before asking for a folder
+        if rdf in (None, "", "None"):
+            ui.messageBox("Robot description format is None.\n" +
+                          "Please choose one robot description format", msg_box_title)
+            return 0
+        if simulator in (None, "", "None") and rdf != "URDF+":
+            ui.messageBox("Simulation environment is None.\n" +
+                          "Please select a simulation environment.", msg_box_title)
+            return 0
+
         # Set the folder to store exported files
         folder_dialog = ui.createFolderDialog()
         folder_dialog.title = "Chose your folder to export"
@@ -158,27 +177,41 @@ def run():
         else:
             ui.messageBox("ACDC4Robot was canceled", msg_box_title)
             return 0 # exit run() function
-        
-        save_folder = save_folder + "/" + robot_name
-        try: os.mkdir(save_folder)
-        except: pass
 
-        ui.messageBox("Start ACDC4Robot Add-IN", msg_box_title)
+        save_folder = save_folder + "/" + robot_name
+        try:
+            os.makedirs(save_folder, exist_ok=True)
+        except OSError as e:
+            ui.messageBox("Cannot create the export folder:\n{}\n{}".format(save_folder, e),
+                          msg_box_title)
+            return 0
 
         # get all the link & joint elements to export
         link_list, joint_list = get_link_joint_list(design)
 
-        rdf = constants.get_rdf()
-        simulator = constants.get_sim_env()
+        # pre-flight validation: report every problem at once instead of
+        # crashing halfway through the export with a raw traceback
+        errors, warnings = validation.validate_design(link_list, joint_list, rdf)
+        if errors:
+            report = validation.format_report(errors, warnings)
+            utils.log(report)
+            ui.messageBox("The design has problems that prevent the export:\n\n" +
+                          report, msg_box_title)
+            return 0
+        if warnings:
+            report = validation.format_report(errors, warnings)
+            utils.log(report)
+            answer = ui.messageBox(report + "\n\nContinue the export anyway?",
+                                   msg_box_title,
+                                   adsk.core.MessageBoxButtonTypes.YesNoButtonType)
+            if answer != adsk.core.DialogResults.DialogYes:
+                return 0
 
-        if rdf == None:
-            ui.messageBox("Robot description format is None.\n" +
-                          "Please choose one robot description format", msg_box_title)
-        elif rdf == "URDF":
-            if simulator  == "None":
-                ui.messageBox("Simulation environment is None.\n" +
-                              "Please select a simulation environment.", msg_box_title)
-            elif simulator in ["Gazebo", "PyBullet", "MuJoCo"]:
+        utils.log("ACDC4Robot: exporting {} links, {} joints to {}".format(
+            len(link_list), len(joint_list), save_folder))
+
+        if rdf == "URDF":
+            if simulator in ["Gazebo", "PyBullet", "MuJoCo"]:
                 # write to .urdf file
                 write.write_urdf(link_list, joint_list, save_folder, robot_name)
                 # export mesh files
@@ -189,10 +222,7 @@ def run():
                 ui.messageBox(f"Finished exporting URDF for {simulator}.", msg_box_title)
 
         elif rdf == "SDFormat":
-            if simulator == "None":
-                ui.messageBox("Simulation environment is None.\n" + 
-                              "Please select a simulation environment.", msg_box_title)
-            elif simulator == "Gazebo":
+            if simulator == "Gazebo":
                 # write to .sdf file
                 write.write_sdf(link_list, joint_list, save_folder, robot_name)
                 # write a model cofig file
@@ -216,10 +246,7 @@ def run():
                               "Please select PyBullet or Gazebo as simulation environment.", msg_box_title)
 
         elif rdf == "MJCF":
-            if simulator == "None":
-                ui.messageBox("Simulation environment is None. \n" +
-                              "Please select a simulation environment.", msg_box_title)
-            elif simulator == "Gazebo":
+            if simulator == "Gazebo":
                 ui.messageBox("Gazebo does not support MJCF. \n"+
                               "Please select MuJoCo for simulation.", msg_box_title)
             elif simulator == "PyBullet":
@@ -243,6 +270,18 @@ def run():
             time.sleep(0.1)
             ui.messageBox("Finished exporting URDF+.", msg_box_title)
         
-    except:
+    except ValueError as e:
+        # ValueError carries a user-actionable message (unsupported joint type,
+        # grounded joint, missing origin, ...) - show it without a traceback
+        if textPalette:
+            textPalette.writeText(traceback.format_exc())
         if ui:
-            ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+            ui.messageBox('Export failed:\n\n{}'.format(e), msg_box_title)
+    except:
+        if textPalette:
+            textPalette.writeText(traceback.format_exc())
+        if ui:
+            ui.messageBox('Export failed with an unexpected error:\n{}\n\n'
+                          'The full traceback was written to the Text Commands '
+                          'palette.'.format(traceback.format_exc(limit=3)),
+                          msg_box_title)

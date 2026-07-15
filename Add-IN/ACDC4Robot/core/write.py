@@ -20,13 +20,23 @@ def write_sdf(link_list: list[Link], joint_list: list[Joint], dir: str, robot_na
     model.attrib = {"name": robot_name}
 
     for link in link_list:
-        # link_ele = link.get_link_sdf_element()
-        link_ele = SDF.get_link_element(link)
+        try:
+            link_ele = SDF.get_link_element(link)
+        except ValueError:
+            raise
+        except Exception as e:
+            raise RuntimeError("Failed to export link '{}': {}".format(
+                link.get_name(), e)) from e
         model.append(link_ele)
-    
+
     for joint in joint_list:
-        # joint_ele = joint.get_joint_sdf_element()
-        joint_ele = SDF.get_joint_element(joint)
+        try:
+            joint_ele = SDF.get_joint_element(joint)
+        except ValueError:
+            raise
+        except Exception as e:
+            raise RuntimeError("Failed to export joint '{}': {}".format(
+                joint.name, e)) from e
         model.append(joint_ele)
 
     # set indent to pretty the xml output
@@ -67,13 +77,23 @@ def write_urdf(link_list: list[Link], joint_list: list[Joint], dir: str, robot_n
     urdf_tree = ET.ElementTree(robot_ele)
 
     for link in link_list:
-        # link_ele = link.get_link_urdf_element()
-        link_ele = URDF.get_link_element(link)
+        try:
+            link_ele = URDF.get_link_element(link)
+        except ValueError:
+            raise
+        except Exception as e:
+            raise RuntimeError("Failed to export link '{}': {}".format(
+                link.get_name(), e)) from e
         robot_ele.append(link_ele)
-    
+
     for joint in joint_list:
-        # joint_ele = joint.get_joint_urdf_element()
-        joint_ele = URDF.get_joint_element(joint)
+        try:
+            joint_ele = URDF.get_joint_element(joint)
+        except ValueError:
+            raise
+        except Exception as e:
+            raise RuntimeError("Failed to export joint '{}': {}".format(
+                joint.name, e)) from e
         if joint_ele is not None:
             robot_ele.append(joint_ele)
 

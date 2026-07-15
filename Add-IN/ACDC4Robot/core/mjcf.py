@@ -219,7 +219,11 @@ def get_mjcf(root_comp: adsk.fusion.Component, robot_name: str, dir: str) -> Ele
     for joint in joints:
         parent = joint.occurrenceTwo
         child = joint.occurrenceOne
-        if parent is None:
+        if parent is None or child is None:
+            # joint against the root component (ground): there is no
+            # occurrence to attach to, skip it instead of crashing later
+            utils.log("MJCF: skipping joint '{}' because it is connected to "
+                      "the root component (ground)".format(joint.name))
             continue
         if parent.fullPathName not in parent_child_dict:
             parent_child_dict[parent.fullPathName] = []

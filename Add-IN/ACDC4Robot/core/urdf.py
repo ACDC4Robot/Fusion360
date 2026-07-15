@@ -400,15 +400,9 @@ class URDF():
             fixed, revolute, prismatic, continuous
             currently, only support urdf joint types above
         """
-        urdf_joint_type_list = ["fixed", "revolute", "prismatic"]
-        if joint.joint.jointMotion.jointType <= 2:
-            urdf_joint_type = urdf_joint_type_list[joint.joint.jointMotion.jointType]
-            if urdf_joint_type == "revolute" and (self.get_joint_limit(joint) is None):
-                urdf_joint_type = "continuous"
-        else:
-            # other joint types are not supported yet
-            pass
-        return urdf_joint_type
+        # raises a descriptive ValueError for unsupported joint types instead
+        # of an UnboundLocalError deep inside the export
+        return joint.get_urdf_joint_type()
 
     def get_joint_origin(self, joint: Joint) -> list[float]:
         """
@@ -482,6 +476,10 @@ class URDF():
 
         J_axis = None
         joint_frame: adsk.core.Matrix3D = joint.get_joint_frame()
+        if joint_frame is None:
+            # joint has no usable origin geometry: keep the axis in the world
+            # frame, consistent with the parent-frame fallback for the origin
+            return w_axis
         w_R_J = math_op.get_rotation_matrix(joint_frame) # represent joint-frame J's orientation w.r.t world-frame w
         J_R_w = math_op.matrix_transpose(w_R_J) # for a rotation matrix, its inverse is its transpose
 
@@ -833,15 +831,9 @@ def get_joint_type(joint: Joint) -> str:
         fixed, revolute, prismatic, continuous
         currently, only support urdf joint types above
     """
-    urdf_joint_type_list = ["fixed", "revolute", "prismatic"]
-    if joint.joint.jointMotion.jointType <= 2:
-        urdf_joint_type = urdf_joint_type_list[joint.joint.jointMotion.jointType]
-        if urdf_joint_type == "revolute" and (get_joint_limit(joint) is None):
-            urdf_joint_type = "continuous"
-    else:
-        # other joint types are not supported yet
-        pass
-    return urdf_joint_type
+    # raises a descriptive ValueError for unsupported joint types instead
+    # of an UnboundLocalError deep inside the export
+    return joint.get_urdf_joint_type()
 
 def get_joint_origin(joint: Joint) -> list[float]:
     """
@@ -916,6 +908,10 @@ def get_joint_axis(joint: Joint) -> list[float]:
 
     J_axis = None
     joint_frame: adsk.core.Matrix3D = joint.get_joint_frame()
+    if joint_frame is None:
+        # joint has no usable origin geometry: keep the axis in the world
+        # frame, consistent with the parent-frame fallback for the origin
+        return w_axis
     w_R_J = math_op.get_rotation_matrix(joint_frame) # represent joint-frame J's orientation w.r.t world-frame w
     J_R_w = math_op.matrix_transpose(w_R_J) # for a rotation matrix, its inverse is its transpose
 

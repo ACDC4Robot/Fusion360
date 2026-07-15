@@ -22,7 +22,9 @@ class Robot():
         """
         Robot name is the root component name
         """
-        robot_name = self.rootComp.name.split()[0]
+        name_parts = self.rootComp.name.split()
+        raw_name = name_parts[0] if name_parts else "robot"
+        robot_name = utils.get_valid_filename(raw_name) or "robot"
         return robot_name
 
     def get_links(self, ) -> List[Link]:

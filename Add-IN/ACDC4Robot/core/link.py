@@ -97,7 +97,9 @@ class Link():
         if self.link.component.name == "base_link":
             name = "base_link"
         else:
-            name = utils.get_valid_filename(self.link.fullPathName)
+            # unique per export run: two occurrences of the same component
+            # ("Part:1", "Part:2") would otherwise collapse to the same name
+            name = utils.get_unique_name(self.link.fullPathName, fallback="link")
 
         return name
 
