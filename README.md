@@ -83,7 +83,11 @@ cp -r ./Fusion2Robot "$HOME/Library/Application Support/Autodesk/Autodesk Fusion
 ### First Run
 After installation for the first time, use `Shift+S` or click `UTILITIES -> Add-Ins -> Scripts and Add-Ins` to open `Scripts and Add-Ins` window.
 
-Find `Fusion2Robot` at `Add-Ins -> My Add-Ins`, select `Fusion2Robot` and click `Run`(for normally use, please select `Run on Startup`). Then the icon will appear beside `UTILITIES -> Add-Ins icon`. 
+Find `Fusion2Robot` at `Add-Ins -> My Add-Ins`, select `Fusion2Robot` and click `Run`(for normally use, please select `Run on Startup`). Then the icon will appear beside `UTILITIES -> Add-Ins icon`.
+
+### Localization
+
+The add-in follows Fusion's current UI language. Simplified Chinese (`ChinesePRCLanguage`) is supported, and all other Fusion languages fall back to English. Robot-description and simulator names such as URDF, MJCF, Gazebo, and MuJoCo remain unchanged so exported behavior and file formats are language-independent.
 ![Run the Add-In](./pictures/RunAdd-In.gif)
 Click the icon to start exporting process from the current design.
 
