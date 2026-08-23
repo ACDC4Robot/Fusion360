@@ -10,7 +10,7 @@ from ...core.link import Link
 from ...core.joint import Joint
 from . import constants
 from ...core import write
-from ...core import utils
+from ...core import preflight, utils
 from ...core.robot import Robot
 from ...core.urdf_plus import URDF_PLUS
 import time
@@ -74,8 +74,7 @@ def export_stl(design: adsk.fusion.Design, save_dir: str, links: list[Link]):
     # create a single exportManager instance
     export_manager = design.exportManager
     # set the directory for the mesh file
-    try: os.mkdir(save_dir + "/meshes")
-    except: pass
+    os.makedirs(save_dir + "/meshes", exist_ok=True)
     mesh_dir = save_dir + "/meshes"
 
     for link in links:
@@ -138,15 +137,33 @@ def run():
     constants.set_text_palette(textPalette)
 
     try:
+        if design is None:
+            ui.messageBox("The active document is not a Fusion design.", msg_box_title)
+            return 0
+
         # # Check the length unit of Fusion360
         # if design.unitsManager.defaultLengthUnits != "m":
         #     ui.messageBox("Please set length unit to 'm'!", msg_box_title)
         #     return 0 # exit run() function
         
         root = design.rootComponent # get root component
-        allComp = design.allComponents
         robot_name = root.name.split()[0]
         constants.set_robot_name(robot_name)
+
+        rdf = constants.get_rdf()
+        simulator = constants.get_sim_env()
+
+        preflight_report = None
+        if rdf == "MJCF" and simulator == "MuJoCo":
+            preflight_report = preflight.inspect_mjcf_design(design)
+            report_text = preflight.format_report(preflight_report)
+            textPalette.writeText(report_text)
+            if not preflight_report["passed"]:
+                ui.messageBox(
+                    report_text + "\n\nNo files were exported. Correct the Fusion assembly and try again.",
+                    "ACDC4Robot MJCF Preflight",
+                )
+                return 0
         
         # Set the folder to store exported files
         folder_dialog = ui.createFolderDialog()
@@ -160,16 +177,15 @@ def run():
             return 0 # exit run() function
         
         save_folder = save_folder + "/" + robot_name
-        try: os.mkdir(save_folder)
-        except: pass
+        os.makedirs(save_folder, exist_ok=True)
+
+        if preflight_report is not None:
+            preflight.write_report(save_folder, preflight_report)
 
         ui.messageBox("Start ACDC4Robot Add-IN", msg_box_title)
 
         # get all the link & joint elements to export
         link_list, joint_list = get_link_joint_list(design)
-
-        rdf = constants.get_rdf()
-        simulator = constants.get_sim_env()
 
         if rdf == None:
             ui.messageBox("Robot description format is None.\n" +
@@ -231,7 +247,13 @@ def run():
                 # export stl files
                 export_stl(design, save_folder, link_list)
                 time.sleep(0.1)
-                ui.messageBox("Finished exporting MJCF for MuJoCo.", msg_box_title)
+                warning_count = len(preflight_report["warnings"]) if preflight_report else 0
+                ui.messageBox(
+                    "Finished exporting MJCF for MuJoCo.\n"
+                    f"Preflight warnings: {warning_count}\n"
+                    "See acdc4robot-export-report.json in the export directory.",
+                    msg_box_title,
+                )
         
         elif rdf == "URDF+":
             robot = Robot(design)

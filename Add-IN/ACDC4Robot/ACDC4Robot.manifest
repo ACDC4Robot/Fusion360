@@ -1,0 +1,13 @@
+{
+  "autodeskProduct": "Fusion",
+  "type": "addin",
+  "id": "e44736cd-f6ec-4878-8300-a0d287a93d7e",
+  "author": "BionicDL-SUSTech",
+  "description": {
+    "": "An open-source add-in to accelerate the robot design-to-simulation process."
+  },
+  "version": "1.1.0",
+  "runOnStartup": true,
+  "supportedOS": "windows|mac",
+  "editEnabled": true
+}

@@ -92,8 +92,19 @@ def get_mjcf_geom(link: Link) -> Element:
     visual_body = link.get_visual_body()
     col_body = link.get_collision_body()
     if (visual_body is None) and (col_body is None):
-        geom_ele.attrib = {"name": geom_name, "type": "mesh", 
-                    "mesh": link.get_name(), "pos": geom_pos, "euler": geom_euler}
+        geom_ele.attrib = {
+            "name": geom_name,
+            "type": "mesh",
+            "mesh": link.get_name(),
+            "pos": geom_pos,
+            "euler": geom_euler,
+            # CAD triangle meshes are exported as visual geometry. Contact is
+            # deliberately disabled until a user adds reviewed collision
+            # geometry for the target simulator and task.
+            "contype": "0",
+            "conaffinity": "0",
+            "group": "2",
+        }
     elif (visual_body is not None) and (col_body is not None):
         error_message = "mjcf will automatically generate geometry for collision. \n"
         error_message = error_message + link.get_name() + " does not need to set geometry for visual and collision seperately."
@@ -194,8 +205,21 @@ def get_mjcf(root_comp: adsk.fusion.Component, robot_name: str, dir: str) -> Ele
     # compiler_ele = ET.SubElement(root, "compiler", 
     #                             {"angle": "radian", "meshdir": (dir + "/meshes"), "eulerseq":"XYZ"})
     # Rotation matrix to euler in "xyz" seems have problem, use "XYZ" at temporary
-    compiler_ele = ET.SubElement(root, "compiler", 
-                                {"angle": "radian", "eulerseq":"XYZ"}) 
+    compiler_ele = ET.SubElement(
+        root,
+        "compiler",
+        {
+            "angle": "radian",
+            "eulerseq": "XYZ",
+            "inertiafromgeom": "false",
+        },
+    )
+
+    ET.SubElement(
+        root,
+        "option",
+        {"timestep": "0.002", "integrator": "implicitfast"},
+    )
     
     # add asset subelement of mujoco
     asset_ele = ET.SubElement(root, "asset")
@@ -207,9 +231,9 @@ def get_mjcf(root_comp: adsk.fusion.Component, robot_name: str, dir: str) -> Ele
     light_ele = ET.SubElement(worldbody_ele, "light")
     light_ele.attrib = {"directional":"true", "pos":"-0.5 0.5 3", "dir":"0 0 -1"}
 
-    # add floor 
-    floor = ET.SubElement(worldbody_ele, "geom", )
-    floor.attrib = {"pos": "0 0 0", "size": "1 1 1", "type": "plane", "rgba": "1 0.83 0.61 0.5"}
+    # Do not guess a floor datum from the CAD origin. A floor at z=0 can cut
+    # through arbitrary assemblies and distort MuJoCo's automatic camera
+    # extent. Station/contact geometry belongs in a reviewed downstream model.
 
     # add body elements to construct a robot
     parent_child_dict = {}
@@ -254,5 +278,3 @@ def get_mjcf(root_comp: adsk.fusion.Component, robot_name: str, dir: str) -> Ele
             add_body_element(occ, parent_ele)
     
     return root
-
-
