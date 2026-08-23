@@ -6,8 +6,6 @@ Get informations about joints from Fusion360 API
 
 from typing import Union
 import adsk, adsk.fusion, adsk.core
-from xml.etree.ElementTree import ElementTree, Element, SubElement
-from ..commands.ACDC4Robot import constants
 from . import utils
 from . import math_operation as math_op
 
@@ -16,18 +14,80 @@ class Joint():
     Joint class for joint
     """
 
+    JOINT_TYPE_NAMES = {
+        0: "Rigid",
+        1: "Revolute",
+        2: "Slider",
+        3: "Cylindrical",
+        4: "Pin-Slot",
+        5: "Planar",
+        6: "Ball",
+    }
+    SUPPORTED_JOINT_TYPES = {0, 1, 2}
+
     def __init__(self, joint: Union[adsk.fusion.Joint, adsk.fusion.AsBuiltJoint]) -> None:
         self.joint = joint
         self.name = joint.name
+        self.parent = None
+        self.child = None
         try:
             self.parent = joint.occurrenceTwo # parent link of joint
             self.child = joint.occurrenceOne
         except Exception as e:
-            textPalette: adsk.core.Palette = constants.get_text_palette()
-            textPalette.writeText(f"Invalid joint: {joint.name}: {str(e)}")
-            pass
+            utils.log(f"Invalid joint '{joint.name}': {str(e)}")
         # self.parent = Link(joint.occurrenceTwo) # parent link of joint
         # self.child = Link(joint.occurrenceOne)
+
+    def is_valid(self) -> bool:
+        """Return whether both joint endpoints are component occurrences."""
+        return self.parent is not None and self.child is not None
+
+    def get_joint_type_name(self) -> str:
+        """Return a readable Fusion joint type for diagnostics."""
+        try:
+            joint_type = self.joint.jointMotion.jointType
+        except Exception:
+            return "Unknown"
+        return self.JOINT_TYPE_NAMES.get(joint_type, f"Unknown({joint_type})")
+
+    def _unsupported_joint_type_error(self) -> ValueError:
+        return ValueError(
+            f"Joint '{self.name}' uses unsupported Fusion type "
+            f"'{self.get_joint_type_name()}'. Only Rigid, Revolute, and Slider "
+            "joints can be exported. Recreate it with a supported type or model "
+            "the additional degrees of freedom using multiple supported joints."
+        )
+
+    def _origin_geometry(self):
+        """Return the geometry that defines the joint frame, or ``None``.
+
+        Fusion exposes an ``AsBuiltJoint.geometry`` directly, while a regular
+        joint can expose either ``JointGeometry`` or a ``JointOrigin`` wrapper.
+        Comparing an instance to ``adsk.fusion.JointOrigin`` was always false;
+        use ``isinstance`` and unwrap the wrapper instead.
+        """
+        try:
+            if hasattr(self.joint, "geometry"):
+                return self.joint.geometry
+            geometry_or_origin = self.joint.geometryOrOriginTwo
+            if isinstance(geometry_or_origin, adsk.fusion.JointOrigin):
+                return geometry_or_origin.geometry
+            return geometry_or_origin
+        except (AttributeError, RuntimeError) as exc:
+            utils.log(
+                f"Joint '{self.name}': unable to read its origin geometry "
+                f"({str(exc)})."
+            )
+            return None
+
+    def require_endpoints(self):
+        if self.is_valid():
+            return
+        raise ValueError(
+            f"Joint '{self.name}' is not between two component occurrences. "
+            "Move grounded/root bodies into a component such as 'base_link' "
+            "and create the joint between component occurrences."
+        )
 
     def get_name(self):
         """
@@ -51,7 +111,7 @@ class Joint():
         """
         # joint names inside each occurrence are identical
         # but joint names in different occurrences can be the same, in which makes conflict
-        if self.child:
+        if self.child is not None:
             child_name = utils.get_valid_filename(self.child.fullPathName)
             return f"{child_name}_{self.get_name()}"
         return self.get_name()
@@ -60,6 +120,7 @@ class Joint():
         """
         Return name of parent link
         """
+        self.require_endpoints()
         if self.parent.component.name == "base_link":
             parent_name = "base_link"
         else:
@@ -71,6 +132,7 @@ class Joint():
         """
         Return name of child link
         """
+        self.require_endpoints()
         if self.child.component.name == "base_link":
             child_name = "base_link"
         else:
@@ -83,12 +145,7 @@ class Joint():
         Checks if the join has a parent origin geometry
         Return: bool
         """
-        if hasattr(self.joint, 'geometry'):
-            return self.joint.geometry is not None
-        elif self.joint.geometryOrOriginTwo == adsk.fusion.JointOrigin:
-            return self.joint.geometryOrOriginTwo.geometry is not None
-        else:
-            return self.joint.geometryOrOriginTwo.origin is not None
+        return self._origin_geometry() is not None
 
     def get_sdf_joint_type(self) -> str:
         """
@@ -101,13 +158,13 @@ class Joint():
         """
         # currently, only support these three sdf joint type
         sdf_joint_type_list = ["fixed", "revolute", "prismatic"]
-        if self.joint.jointMotion.jointType <= 2:
+        if self.joint.jointMotion.jointType in self.SUPPORTED_JOINT_TYPES:
             sdf_joint_type = sdf_joint_type_list[self.joint.jointMotion.jointType]
             # # TODO:It seems continuous joint type has some problem with gazebo
             # if sdf_joint_type == "revolute" and (self.get_limits() is None):
             #     sdf_joint_type = "continuous"
         else:
-            pass
+            raise self._unsupported_joint_type_error()
         return sdf_joint_type
     
     def get_mjcf_joint_type(self) -> str:
@@ -118,21 +175,20 @@ class Joint():
         joint_type: str
         """
         mjcf_joint_type_list = [None, "hinge", "slide"]
-        if self.joint.jointMotion.jointType <= 2:
+        if self.joint.jointMotion.jointType in self.SUPPORTED_JOINT_TYPES:
             mjcf_joint_type = mjcf_joint_type_list[self.joint.jointMotion.jointType]
         else:
-            pass
+            raise self._unsupported_joint_type_error()
         return mjcf_joint_type
     
     def get_urdf_joint_type(self) -> str:
         urdf_joint_type_list = ["fixed", "revolute", "prismatic"]
-        if self.joint.jointMotion.jointType <= 2:
+        if self.joint.jointMotion.jointType in self.SUPPORTED_JOINT_TYPES:
             urdf_joint_type = urdf_joint_type_list[self.joint.jointMotion.jointType]
             if urdf_joint_type == "revolute" and (self.get_limits() is None):
                 urdf_joint_type = "continuous"
         else:
-            # other joint types are not supported yet
-            pass
+            raise self._unsupported_joint_type_error()
         return urdf_joint_type
 
     def get_limits(self):
@@ -175,12 +231,14 @@ class Joint():
         # I guess using child joint origin works just because they coincide together for all the text examples
 
         # get parent joint origin as the child joint
-        if hasattr(self.joint, 'geometry'):
-            w_P_Jc = self.joint.geometry.origin.asArray()
-        elif self.joint.geometryOrOriginTwo == adsk.fusion.JointOrigin:
-            w_P_Jc = self.joint.geometryOrOriginTwo.geometry.origin.asArray()
-        else:
-            w_P_Jc = self.joint.geometryOrOriginTwo.origin.asArray()
+        self.require_endpoints()
+        geometry = self._origin_geometry()
+        if geometry is None:
+            raise ValueError(
+                f"Joint '{self.name}' has no usable origin geometry. Recreate "
+                "the joint or define a valid joint origin before export."
+            )
+        w_P_Jc = geometry.origin.asArray()
 
         # convert from cm to m
         w_P_Jc = [round(i*0.01, 6) for i in w_P_Jc] 
@@ -215,17 +273,10 @@ class Joint():
             translation unit: cm
         """
         # get parent joint origin's coordinate w.r.t world frame
-        if hasattr(self.joint, 'geometry'):
-            geometry: adsk.fusion.JointGeometry = self.joint.geometry
-            if geometry is None:
-                return None
-            w_P_J = geometry.origin.asArray()
-        else:
-            geometry: adsk.fusion.JointOrigin = self.joint.geometryOrOriginTwo
-            if self.joint.geometryOrOriginTwo == adsk.fusion.JointOrigin:
-                w_P_J = geometry.geometry.origin.asArray()
-            else:
-                w_P_J = geometry.origin.asArray()
+        geometry = self._origin_geometry()
+        if geometry is None:
+            return None
+        w_P_J = geometry.origin.asArray()
 
         w_P_J = [round(i, 6) for i in w_P_J]
         
@@ -245,6 +296,7 @@ class Joint():
         """
         Get joint origin, which is the transform from the parent frame to this joint
         """
+        self.require_endpoints()
         parent_link = self.parent
 
         # get parent_frame w.r.t world frame
@@ -263,26 +315,26 @@ class Joint():
             # then the parent link frame is the parent frame
             parent_frame: adsk.core.Matrix3D = parent_link.transform2
         else:
-            if parent_joint.geometryOrOriginTwo == adsk.fusion.JointOrigin:
-                w_P_J = parent_joint.geometryOrOriginTwo.geometry.origin.asArray()
-            else:
-                w_P_J = parent_joint.geometryOrOriginTwo.origin.asArray()
-
-            w_P_J = [round(i, 6) for i in w_P_J]
-            
-            # no matter jointGeometry or jointOrigin object, both have these properties
-            zAxis: adsk.core.Vector3D = parent_joint.geometryOrOriginTwo.primaryAxisVector
-            xAxis: adsk.core.Vector3D = parent_joint.geometryOrOriginTwo.secondaryAxisVector
-            yAxis: adsk.core.Vector3D = parent_joint.geometryOrOriginTwo.thirdAxisVector
-
-            origin = adsk.core.Point3D.create(w_P_J[0], w_P_J[1], w_P_J[2])
-
-            parent_frame = adsk.core.Matrix3D.create()
-            parent_frame.setWithCoordinateSystem(origin, xAxis, yAxis, zAxis)
+            parent_frame = Joint(parent_joint).get_joint_frame()
+            if parent_frame is None:
+                parent_frame = parent_link.transform2
             
         
         # get joint frame w.r.t world frame
         joint_frame = self.get_joint_frame()
+        if joint_frame is None:
+            if self.joint.jointMotion.jointType == 0:
+                # Rigid as-built joints can legitimately have no explicit
+                # origin. Their fixed transform is fully determined by the
+                # two occurrence frames.
+                transform = math_op.coordinate_transform(
+                    parent_link.transform2, self.child.transform2
+                )
+                return math_op.matrix3d_2_pose(transform)
+            raise ValueError(
+                f"Joint '{self.name}' has no usable origin geometry. Recreate "
+                "the joint or define a valid joint origin before export."
+            )
 
         # from_origin, from_xAxis, from_yAxis, from_zAxis = parent_frame.getAsCoordinateSystem()
         # to_origin, to_xAsix, to_yAxis, to_zAxis = joint_frame.getAsCoordinateSystem()
@@ -329,8 +381,9 @@ class Joint():
         elif self.joint.jointMotion.jointType == 5: # PlanarJointType
             axis1 = [round(i, 6) for i in self.joint.jointMotion.primarySlideDirectionVector.asArray()] # rotation axis
             axis2 = [round(i, 6) for i in self.joint.jointMotion.secondarySlideDirectionVector.asArray()] # slide axis
-        elif self.joint.jointMotion.jointType == 6: # BallJointType
-            pass
+            return axis1, axis2
+        else: # BallJointType and unknown future joint types have no single axis
+            return None, None
         
     def get_axes_urdf(self):
         """
@@ -345,6 +398,8 @@ class Joint():
         w_axis1, w_axis2 = self.get_axes()
         J_axis1, J_axis2 = None, None
         joint_frame: adsk.core.Matrix3D = self.get_joint_frame()
+        if joint_frame is None:
+            return w_axis1, w_axis2
         w_R_J = math_op.get_rotation_matrix(joint_frame) # represent joint-frame J's orientation w.r.t world-frame w
         J_R_w = math_op.matrix_transpose(w_R_J)
         if w_axis1 is not None:
@@ -366,6 +421,7 @@ class Joint():
         Return:
         axis: list or None
         """
+        self.require_endpoints()
         w_axis1, _ = self.get_axes()
         C_axis = None
         child_link_frame: adsk.core.Matrix3D = self.child.transform2

@@ -7,10 +7,9 @@ import adsk, adsk.core, adsk.fusion
 from .link import Link
 from .joint import Joint
 import xml.etree.ElementTree as ET
-from xml.etree.ElementTree import Element, SubElement
+from xml.etree.ElementTree import Element
 from . import math_operation as math_op
 from . import utils
-from ..commands.ACDC4Robot import constants
 
 def get_mjcf_mesh(link: Link) -> Element:
     """
@@ -58,7 +57,15 @@ def get_mjcf_body(link: Link, parent_link: Link = None) -> Element:
     # insert parent joint if it exists
     parent_joint = link.get_parent_joint()
     if parent_joint is not None:
-        joint_ele: Element = get_mjcf_joint(Joint(parent_joint))
+        try:
+            joint_ele: Element = get_mjcf_joint(Joint(parent_joint))
+        except ValueError:
+            raise
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to generate MJCF joint '{parent_joint.name}' for "
+                f"child link '{link.get_name()}': {exc}"
+            ) from exc
         # undifined joint will welded two body
         if joint_ele is not None:
             body_ele.append(joint_ele)
@@ -205,7 +212,7 @@ def get_mjcf(root_comp: adsk.fusion.Component, robot_name: str, dir: str) -> Ele
     # compiler_ele = ET.SubElement(root, "compiler", 
     #                             {"angle": "radian", "meshdir": (dir + "/meshes"), "eulerseq":"XYZ"})
     # Rotation matrix to euler in "xyz" seems have problem, use "XYZ" at temporary
-    compiler_ele = ET.SubElement(
+    ET.SubElement(
         root,
         "compiler",
         {
@@ -241,10 +248,11 @@ def get_mjcf(root_comp: adsk.fusion.Component, robot_name: str, dir: str) -> Ele
 
     joints = [j for j in root_comp.allJoints] + [j for j in root_comp.allAsBuiltJoints]
     for joint in joints:
-        parent = joint.occurrenceTwo
-        child = joint.occurrenceOne
-        if parent is None:
-            continue
+        wrapped_joint = Joint(joint)
+        if not wrapped_joint.is_valid():
+            wrapped_joint.require_endpoints()
+        parent = wrapped_joint.parent
+        child = wrapped_joint.child
         if parent.fullPathName not in parent_child_dict:
             parent_child_dict[parent.fullPathName] = []
 

@@ -9,6 +9,17 @@ from . import sdf as SDF
 from . import mjcf as MJCF
 import adsk, adsk.core, adsk.fusion
 
+
+def _contextualize(kind: str, name: str, operation, *args):
+    """Run one export operation and preserve the offending object in errors."""
+    try:
+        return operation(*args)
+    except ValueError:
+        # ValueError already carries an actionable user correction.
+        raise
+    except Exception as exc:
+        raise RuntimeError(f"Failed to export {kind} '{name}': {exc}") from exc
+
 def write_sdf(link_list: list[Link], joint_list: list[Joint], dir: str, robot_name: str):
     """
     Write all the joint and link elements to the sdf file
@@ -20,13 +31,11 @@ def write_sdf(link_list: list[Link], joint_list: list[Joint], dir: str, robot_na
     model.attrib = {"name": robot_name}
 
     for link in link_list:
-        # link_ele = link.get_link_sdf_element()
-        link_ele = SDF.get_link_element(link)
+        link_ele = _contextualize("link", link.get_name(), SDF.get_link_element, link)
         model.append(link_ele)
     
     for joint in joint_list:
-        # joint_ele = joint.get_joint_sdf_element()
-        joint_ele = SDF.get_joint_element(joint)
+        joint_ele = _contextualize("joint", joint.name, SDF.get_joint_element, joint)
         model.append(joint_ele)
 
     # set indent to pretty the xml output
@@ -67,13 +76,11 @@ def write_urdf(link_list: list[Link], joint_list: list[Joint], dir: str, robot_n
     urdf_tree = ET.ElementTree(robot_ele)
 
     for link in link_list:
-        # link_ele = link.get_link_urdf_element()
-        link_ele = URDF.get_link_element(link)
+        link_ele = _contextualize("link", link.get_name(), URDF.get_link_element, link)
         robot_ele.append(link_ele)
     
     for joint in joint_list:
-        # joint_ele = joint.get_joint_urdf_element()
-        joint_ele = URDF.get_joint_element(joint)
+        joint_ele = _contextualize("joint", joint.name, URDF.get_joint_element, joint)
         if joint_ele is not None:
             robot_ele.append(joint_ele)
 
@@ -138,7 +145,9 @@ def write_mjcf(rootComp: adsk.fusion.Component, robotName: str, dir: str):
     robotName: robot name
     dir: directory of the mjcf file
     """
-    mjcf_ele = MJCF.get_mjcf(rootComp, robotName, dir)
+    mjcf_ele = _contextualize(
+        "MJCF assembly", robotName, MJCF.get_mjcf, rootComp, robotName, dir
+    )
     mjcf_tree = ET.ElementTree(mjcf_ele)
 
     # set indent to pretty the xml output

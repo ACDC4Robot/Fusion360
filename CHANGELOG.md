@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.1.1 - 2026-08-23
+
+### Fixed
+
+- Correctly distinguish and unwrap Fusion `JointOrigin` objects when resolving
+  a joint frame. The previous instance-to-class comparison could never be true.
+- Reject moving joints with missing or broken origin geometry before export.
+- Replace undefined-variable crashes for cylindrical, pin-slot, planar, ball,
+  and unknown joint types with errors that name the joint and supported types.
+- Replace grounded/root-joint attribute failures with an explanation of how to
+  create a component-to-component joint, such as against `base_link`.
+- Guarantee that joint-axis accessors return a stable two-value tuple.
+- Preserve the failing link, joint, or assembly name when lower-level writers
+  raise an unexpected exception.
+
+### Changed
+
+- Sanitize the Fusion document name for the export directory/model name and use
+  `robot` if sanitization produces an empty name.
+- Show expected validation failures as concise Fusion dialogs while retaining
+  full tracebacks in Text Commands for diagnosis.
+
+### Attribution and scope
+
+This release reconciles the joint-origin, grounded-joint, unsupported-type,
+axis-return, and error-context findings contributed in pull request #13. It
+does not merge that pull request's conflicting occurrence-name registry or its
+broader URDF/SDF validation redesign; v1.1.0 occurrence-preserving names and
+the MJCF-specific fail-closed preflight remain authoritative.
+
 ## 1.1.0 - 2026-08-23
 
 ### Fixed

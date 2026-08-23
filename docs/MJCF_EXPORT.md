@@ -1,6 +1,6 @@
 # MJCF export guide
 
-ACDC4Robot 1.1.0 exports a Fusion assembly as a structural MuJoCo model. The
+ACDC4Robot 1.1.1 exports a Fusion assembly as a structural MuJoCo model. The
 Fusion document remains the authority for component occurrence transforms,
 physical properties, and supported joint kinematics.
 
@@ -12,6 +12,11 @@ physical properties, and supported joint kinematics.
   bodies are rejected before STL export.
 - Give every occurrence and joint a unique name.
 - Connect visible links as one tree using rigid, revolute, or slider joints.
+- Create joints between two component occurrences. A Fusion joint whose parent
+  or child is the root/ground is rejected with a corrective message; put the
+  grounded geometry in a component such as `base_link` instead.
+- Give every revolute or slider joint a valid origin. Missing or broken origin
+  geometry is rejected because MuJoCo needs the axis location.
 - In a Fusion joint, occurrence one becomes the child and occurrence two the
   parent in the exported body tree.
 - Freeze revisions of externally referenced components before publishing a
@@ -20,6 +25,22 @@ physical properties, and supported joint kinematics.
 The preflight runs before an export directory is created. A rejected assembly
 therefore cannot leave a partial model that looks successful. Every successful
 export includes `acdc4robot-export-report.json`.
+
+## Student-facing failure contract
+
+The exporter stops before writing a partial model when it encounters:
+
+- a joint connected directly to Fusion root/ground;
+- a moving joint with missing or broken origin geometry;
+- a cylindrical, pin-slot, planar, ball, or unknown joint type;
+- a hidden/dangling endpoint, duplicate name, disconnected link, multiple
+  parent, cycle, or multiple-root assembly;
+- unsupported surface or mesh-only source geometry.
+
+These failures name the offending object and state the corrective action. This
+contract is suitable for course instructions and automated evidence screening:
+students should fix the Fusion assembly rather than editing an incomplete MJCF
+until it happens to load.
 
 ## Deliberate model boundary
 
@@ -42,14 +63,16 @@ Add those properties in a reviewed, application-specific MJCF layer. This
 separation prevents CAD export from silently asserting unmeasured actuator or
 contact behavior.
 
-## Verification performed for 1.1.0
+## Verification performed for 1.1.1
 
-The MJCF path was exercised in Fusion on macOS with a linked six-occurrence,
+The v1.1.0 MJCF path was exercised in Fusion on macOS with a linked six-occurrence,
 one-revolute-joint assembly containing repeated pin and payload components. The
 result passed preflight, exported six uniquely named STLs, and compiled in
 MuJoCo 3.3.7 as one connected one-DOF model with no startup contacts.
 
-The automated tests use Fusion API stubs and cover name preservation, current
-iterable vector compatibility, disconnected assemblies, valid connected trees,
-duplicate joint names, and release identity. They do not replace live Fusion
-regression testing.
+Version 1.1.1 retains that exporter/model path and adds Fusion API stub
+regressions for wrapped `JointOrigin` geometry, grounded endpoints, missing
+moving-joint origins, unsupported joint types, stable ball/planar axis access,
+valid connected trees, and release identity. The deterministic installable ZIP
+is also rebuilt twice and compared byte-for-byte. These tests do not replace a
+live Fusion regression for every assembly topology.

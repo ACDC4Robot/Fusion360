@@ -1,3 +1,4 @@
+import json
 import sys
 import tempfile
 import unittest
@@ -25,6 +26,7 @@ class ReleaseArchiveTests(unittest.TestCase):
 
                 with zipfile.ZipFile(second_path) as archive:
                     names = archive.namelist()
+                    self.assertEqual(second_path.name, "ACDC4Robot-1.1.1.zip")
                     self.assertIn("ACDC4Robot/ACDC4Robot.manifest", names)
                     self.assertIn("ACDC4Robot/LICENSE", names)
                     self.assertIn("ACDC4Robot/MJCF_EXPORT.md", names)
@@ -32,6 +34,12 @@ class ReleaseArchiveTests(unittest.TestCase):
                     payload = b"".join(archive.read(name) for name in names)
                     private_home_prefix = b"/" + b"Users/"
                     self.assertNotIn(private_home_prefix, payload)
+                    manifest = json.loads(
+                        archive.read("ACDC4Robot/ACDC4Robot.manifest")
+                    )
+                    self.assertEqual(manifest["version"], "1.1.1")
+                    joint_source = archive.read("ACDC4Robot/core/joint.py")
+                    self.assertIn(b"has no usable origin geometry", joint_source)
             finally:
                 build_addin_release.DIST = original_dist
 

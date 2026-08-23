@@ -5,7 +5,7 @@ Export robot description format files from Fusion360 design
 """
 
 import adsk, adsk.core, adsk.fusion, traceback
-import os, sys
+import os
 from ...core.link import Link
 from ...core.joint import Joint
 from . import constants
@@ -147,7 +147,7 @@ def run():
         #     return 0 # exit run() function
         
         root = design.rootComponent # get root component
-        robot_name = root.name.split()[0]
+        robot_name = utils.get_valid_filename(root.name) or "robot"
         constants.set_robot_name(robot_name)
 
         rdf = constants.get_rdf()
@@ -265,6 +265,20 @@ def run():
             time.sleep(0.1)
             ui.messageBox("Finished exporting URDF+.", msg_box_title)
         
-    except:
+    except ValueError as exc:
+        # Expected validation/export failures should be concise and actionable
+        # in the dialog while retaining the traceback in Text Commands.
+        if textPalette:
+            textPalette.writeText(traceback.format_exc())
         if ui:
-            ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+            ui.messageBox(f"Export stopped:\n\n{exc}", msg_box_title)
+    except Exception:
+        if textPalette:
+            textPalette.writeText(traceback.format_exc())
+        if ui:
+            ui.messageBox(
+                "Export failed with an unexpected error.\n\n"
+                "The full traceback was written to the Text Commands palette.\n\n"
+                + traceback.format_exc(limit=3),
+                msg_box_title,
+            )
