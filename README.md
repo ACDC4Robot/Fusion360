@@ -34,6 +34,9 @@ provides reusable Fusion 360 robot models for design, simulation, and learning.
 - **ACDC4Robot v1.1.1 is the current supported GitHub release.** Download the
   installable plugin and checksum from the
   [v1.1.1 release page](https://github.com/ACDC4Robot/Fusion360/releases/tag/v1.1.1).
+- **The `main` branch now contains the v1.2.0 development candidate**, adding
+  Simplified Chinese UI localization contributed through pull request #14.
+  It is available for live Fusion testing before its GitHub Release is cut.
 - The Fusion→MJCF→MuJoCo path now preserves repeated occurrence identities,
   runs a fail-closed assembly preflight, records an export provenance report,
   and gives actionable errors for grounded endpoints, missing joint origins,
@@ -161,6 +164,17 @@ with corrective messages instead of secondary Python failures. See the
 [MJCF export guide](docs/MJCF_EXPORT.md) for the supported assembly structure,
 verification status, and the deliberate boundary between CAD export and
 application-specific actuator/contact modeling.
+
+### User-interface language
+
+The v1.2.0 development candidate follows Fusion's user-interface language and
+supports English and Simplified Chinese. Export-format and simulator choices
+remain stable technical values (`URDF`, `SDFormat`, `MJCF`, `URDF+`, `Gazebo`,
+`PyBullet`, and `MuJoCo`) regardless of the displayed language. Unsupported
+languages fall back to English. The machine-readable
+`acdc4robot-export-report.json` remains English so reports are reproducible and
+can be compared across computers; only user-facing labels and messages are
+localized.
 
 ### Format and target choices
 

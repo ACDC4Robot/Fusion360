@@ -10,6 +10,7 @@ import os
 
 from . import utils
 from .joint import Joint as ExportJoint
+from .. import i18n
 from ..version import __version__
 
 
@@ -302,21 +303,35 @@ def inspect_mjcf_design(design):
     }
 
 
-def format_report(report):
+def format_report(report, locale=None):
+    selected_locale = locale or i18n.get_locale()
+    roots = (
+        ", ".join(report["root_links"])
+        if report["root_links"]
+        else i18n.translate("preflight_none", selected_locale)
+    )
     lines = [
-        "ACDC4Robot MJCF preflight",
-        f"Design: {report['design_name']}",
-        f"Visible links: {report['visible_link_count']}",
-        f"Joints: {report['joint_count']}",
-        f"Active DOF: {report['active_dof_count']}",
-        f"Roots: {', '.join(report['root_links']) if report['root_links'] else '(none)'}",
+        i18n.translate("preflight_title", selected_locale),
+        f"{i18n.translate('preflight_design', selected_locale)}: {report['design_name']}",
+        f"{i18n.translate('preflight_visible_links', selected_locale)}: "
+        f"{report['visible_link_count']}",
+        f"{i18n.translate('preflight_joints', selected_locale)}: {report['joint_count']}",
+        f"{i18n.translate('preflight_active_dof', selected_locale)}: "
+        f"{report['active_dof_count']}",
+        f"{i18n.translate('preflight_roots', selected_locale)}: {roots}",
     ]
     if report["errors"]:
-        lines.append("Errors:")
-        lines.extend(f"- {item}" for item in report["errors"])
+        lines.append(f"{i18n.translate('preflight_errors', selected_locale)}:")
+        lines.extend(
+            f"- {i18n.localize_error_message(item, selected_locale)}"
+            for item in report["errors"]
+        )
     if report["warnings"]:
-        lines.append("Warnings:")
-        lines.extend(f"- {item}" for item in report["warnings"])
+        lines.append(f"{i18n.translate('preflight_warnings', selected_locale)}:")
+        lines.extend(
+            f"- {i18n.localize_error_message(item, selected_locale)}"
+            for item in report["warnings"]
+        )
     return "\n".join(lines)
 
 

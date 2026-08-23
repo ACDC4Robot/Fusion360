@@ -242,14 +242,14 @@ class MJCFExportPatchTests(unittest.TestCase):
     def test_report_contains_release_identity(self):
         report = preflight.inspect_mjcf_design(Design([self.servo], []))
         self.assertTrue(report["passed"], report["errors"])
-        self.assertEqual(report["plugin_version"], "1.1.1")
+        self.assertEqual(report["plugin_version"], "1.2.0")
         self.assertEqual(report["active_dof_count"], 0)
         self.assertIn("exported model is rigid", " ".join(report["warnings"]))
 
     def test_fusion_manifest_matches_python_release_identity(self):
         manifest_path = REPOSITORY_ROOT / "Add-IN" / "ACDC4Robot" / "ACDC4Robot.manifest"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        self.assertEqual(manifest["version"], "1.1.1")
+        self.assertEqual(manifest["version"], "1.2.0")
         self.assertEqual(manifest["type"], "addin")
         self.assertEqual(manifest["supportedOS"], "windows|mac")
 
@@ -326,6 +326,14 @@ class MJCFExportPatchTests(unittest.TestCase):
         report = preflight.inspect_mjcf_design(Design([self.servo, self.link], [joint]))
         self.assertFalse(report["passed"])
         self.assertIn("no usable origin geometry", " ".join(report["errors"]))
+
+    def test_chinese_preflight_display_does_not_change_english_report(self):
+        report = preflight.inspect_mjcf_design(Design(self.occurrences, []))
+        displayed = preflight.format_report(report, locale="zh_CN")
+        self.assertIn("ACDC4Robot MJCF 导出前检查", displayed)
+        self.assertIn("可见连杆: 6", displayed)
+        self.assertIn("MJCF 要求一个连通的实体树", displayed)
+        self.assertIn("MJCF requires one connected body tree", " ".join(report["errors"]))
 
 
 if __name__ == "__main__":

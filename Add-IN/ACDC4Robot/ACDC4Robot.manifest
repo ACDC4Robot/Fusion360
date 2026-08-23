@@ -6,7 +6,7 @@
   "description": {
     "": "An open-source add-in to accelerate the robot design-to-simulation process."
   },
-  "version": "1.1.1",
+  "version": "1.2.0",
   "runOnStartup": true,
   "supportedOS": "windows|mac",
   "editEnabled": true

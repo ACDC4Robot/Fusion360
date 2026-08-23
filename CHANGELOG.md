@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.2.0 - Unreleased
+
+### Added
+
+- Simplified Chinese localization for the command panel, selection prompts,
+  completion dialogs, actionable export errors, and the MJCF preflight summary.
+- Locale-aware option labels that always map back to stable technical values
+  such as `MJCF` and `MuJoCo` before export logic runs.
+- English fallback for unsupported Fusion UI languages and untranslated future
+  diagnostics.
+- Regression coverage for catalog parity, fallback behavior, option round trips,
+  localized dynamic diagnostics, and the localized MJCF preflight summary.
+
+### Compatibility and attribution
+
+This implementation ports the dependency-free localization design and tests
+contributed by MermaidFAR in pull request #14 onto the current exporter. It
+retains the version 1.1.1 fail-closed MJCF preflight, occurrence-preserving
+naming, actionable joint validation, and English machine-readable provenance
+report. Version 1.2.0 remains a development candidate until live Fusion testing
+is complete; version 1.1.1 remains the current supported GitHub release.
+
 ## 1.1.1 - 2026-08-23
 
 ### Fixed

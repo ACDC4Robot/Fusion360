@@ -5,6 +5,8 @@ contains common useful functions for this project
 import adsk, adsk.core, adsk.fusion
 import re
 
+from .. import i18n
+
 ## https://github.com/django/django/blob/master/django/utils/text.py
 def get_valid_filename(s):
     """
@@ -47,11 +49,14 @@ def error_box(message: str):
     """
     app = adsk.core.Application.get()
     ui = app.userInterface
-    box_title = "ACDC4Robot Error"
+    locale = i18n.get_locale()
+    box_title = i18n.translate("error_title", locale)
     buttons = adsk.core.MessageBoxButtonTypes.OKButtonType
     icon = adsk.core.MessageBoxIconTypes.WarningIconType
 
-    _ = ui.messageBox(message, box_title, buttons, icon)
+    _ = ui.messageBox(
+        i18n.localize_error_message(message, locale), box_title, buttons, icon
+    )
 
 def terminate_box():
     """

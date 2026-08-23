@@ -26,7 +26,7 @@ class ReleaseArchiveTests(unittest.TestCase):
 
                 with zipfile.ZipFile(second_path) as archive:
                     names = archive.namelist()
-                    self.assertEqual(second_path.name, "ACDC4Robot-1.1.1.zip")
+                    self.assertEqual(second_path.name, "ACDC4Robot-1.2.0.zip")
                     self.assertIn("ACDC4Robot/ACDC4Robot.manifest", names)
                     self.assertIn("ACDC4Robot/LICENSE", names)
                     self.assertIn("ACDC4Robot/MJCF_EXPORT.md", names)
@@ -37,7 +37,8 @@ class ReleaseArchiveTests(unittest.TestCase):
                     manifest = json.loads(
                         archive.read("ACDC4Robot/ACDC4Robot.manifest")
                     )
-                    self.assertEqual(manifest["version"], "1.1.1")
+                    self.assertEqual(manifest["version"], "1.2.0")
+                    self.assertIn("ACDC4Robot/i18n.py", names)
                     joint_source = archive.read("ACDC4Robot/core/joint.py")
                     self.assertIn(b"has no usable origin geometry", joint_source)
             finally:
