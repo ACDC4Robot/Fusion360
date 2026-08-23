@@ -114,13 +114,18 @@ def coordinate_transform(w_T_from: adsk.core.Matrix3D, w_T_to: adsk.core.Matrix3
         from_T_to = inv(w_T_from) * w_T_to
     """ 
     from_T_to = adsk.core.Matrix3D.create()
-    w_T_from.invert() # from_T_w
+    # Matrix3D.invert() mutates its receiver. Inverting the occurrence matrix
+    # directly can corrupt later body-frame calculations in the same export.
+    # Work on a copy instead. This defect was independently identified in
+    # repository pull request #13.
+    from_T_w = w_T_from.copy()
+    from_T_w.invert()
 
     for i in range(4):
         for j in range(4):
             value = 0
             for k in range(4):
-                value += w_T_from.getCell(i, k) * w_T_to.getCell(k, j)
+                value += from_T_w.getCell(i, k) * w_T_to.getCell(k, j)
             from_T_to.setCell(i, j, value)
 
     return from_T_to

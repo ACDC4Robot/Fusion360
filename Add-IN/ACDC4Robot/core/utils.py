@@ -15,12 +15,12 @@ def get_valid_filename(s):
     >>> get_valid_filename("john's portrait in 2004.jpg")
     'johns_portrait_in_2004.jpg'
     """
-    # Replace the number `:#+` by `-`
-    s = re.sub(r':.*?\+', '_', s)
-    # Remove the number at the end of the full path name
-    s = re.sub(r':.*$', '', s)
-
-    s = str(s).strip().replace(' ', '-')
+    # Fusion occurrence paths contain instance suffixes such as ``Payload:1``
+    # and use ``+`` between nested occurrences.  Removing everything after
+    # ``:`` made repeated occurrences collide in MJCF and overwrite one
+    # another's STL files.  Preserve hierarchy and instance identity.
+    s = str(s).strip()
+    s = s.replace('+', '__').replace(':', '_').replace(' ', '-')
     return re.sub(r'(?u)[^-\w.]', '', s)
 
 def error_box(message: str):

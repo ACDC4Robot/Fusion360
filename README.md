@@ -54,6 +54,10 @@ Due to the review process of app store, ACDC4Robot at app store might not update
 ### Manually Installation
 Download and copy `/Add-IN/ACDC4Robot` folder into Fusion360's Add-in directory which can be found at `Preferences -> General -> API -> Default Path for Scripts and Add-Ins`.
 
+Release maintainers can create a deterministic, directly installable archive
+with `python3 scripts/build_addin_release.py`. Unzip it and copy the resulting
+`ACDC4Robot` folder into the same add-in directory.
+
 In default it should be at:
 
 Windows:
@@ -83,12 +87,22 @@ cp -r ./Fusion2Robot "$HOME/Library/Application Support/Autodesk/Autodesk Fusion
 ### First Run
 After installation for the first time, use `Shift+S` or click `UTILITIES -> Add-Ins -> Scripts and Add-Ins` to open `Scripts and Add-Ins` window.
 
-Find `Fusion2Robot` at `Add-Ins -> My Add-Ins`, select `Fusion2Robot` and click `Run`(for normally use, please select `Run on Startup`). Then the icon will appear beside `UTILITIES -> Add-Ins icon`. 
+Find `ACDC4Robot` at `Add-Ins -> My Add-Ins`, select `ACDC4Robot` and click `Run` (for normal use, select `Run on Startup`). Then the icon will appear beside `UTILITIES -> Add-Ins icon`.
 ![Run the Add-In](./pictures/RunAdd-In.gif)
 Click the icon to start exporting process from the current design.
 
 
 ## Usage
+
+### MJCF export in version 1.1.0
+
+The MJCF path now runs a fail-closed assembly preflight before writing files,
+preserves repeated occurrence names, supports standard and as-built joints, and
+writes an `acdc4robot-export-report.json` provenance report. See the
+[MJCF export guide](docs/MJCF_EXPORT.md) for the supported assembly structure,
+verification status, and the deliberate boundary between CAD export and
+application-specific actuator/contact modeling.
+
 ### Before Using This Add-In
 Before exporting robot description files, please follow the following instructions to make sure the design file is suitable to execute this add-in. 
 
@@ -98,9 +112,13 @@ To prevent unexpected modification of the original design, it is better to <mark
 ![Do not capture Design History](./pictures/DoNotCaptureDesignHistory.PNG)
 - Set the default unit of the design document to `m`
 ![Change Units](./pictures/ChangeUnits.png)
-- Using `Break Link` to make *external component* into *internal component*
+- For a self-contained design, use `Break Link` to make an *external component*
+  internal. MJCF 1.1.0 can export referenced occurrences, but records a warning
+  because their source revisions must be frozen for reproducibility.
 ![Break Link](./pictures/BreakLink.gif)
-- Occurrences refer to the same component are not supported yet, use `Make Independent` to independ those occurrences.
+- Repeated occurrences are supported by MJCF 1.1.0 and receive distinct export
+  names. Other export formats have not been revalidated for this behavior; use
+  `Make Independent` if you encounter a format-specific problem.
 ![Make Independent](./pictures/MakeIndependent.gif)
 - - Make sure all the components are named with alphanumeric characters, underscore character `_`, and hyphe character `-`. Other languages and characters might cause problems.
 - - Components need to be joint together with a **flat** structure in order to export the robot description files properly. Please check the [instructions for Fusion360 Assembly](./InstructionsForAssembly.md).

@@ -1,2 +1,14 @@
 .DS_Store
 .vscode
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local Fusion/MuJoCo validation artifacts. These are not part of the plugin.
+/backups/
+/exports/
+/tools/
+/dist/
+
+# A developer-specific Fusion Python path must never be committed.
+Add-IN/ACDC4Robot/.env
