@@ -23,6 +23,20 @@ def get_valid_filename(s):
     s = s.replace('+', '__').replace(':', '_').replace(' ', '-')
     return re.sub(r'(?u)[^-\w.]', '', s)
 
+
+def log(message: str):
+    """Write to Fusion's text palette when available, without breaking export."""
+    try:
+        from ..commands.ACDC4Robot import constants
+
+        palette = constants.get_text_palette()
+        if palette is not None:
+            palette.writeText(str(message))
+    except Exception:
+        # Diagnostics are best-effort. A missing/closed palette must never turn
+        # an otherwise actionable export error into a second exception.
+        pass
+
 def error_box(message: str):
     """
     a message box to show error message

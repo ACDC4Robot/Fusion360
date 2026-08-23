@@ -94,11 +94,13 @@ Click the icon to start exporting process from the current design.
 
 ## Usage
 
-### MJCF export in version 1.1.0
+### MJCF export in version 1.1.1
 
-The MJCF path now runs a fail-closed assembly preflight before writing files,
+The MJCF path runs a fail-closed assembly preflight before writing files,
 preserves repeated occurrence names, supports standard and as-built joints, and
-writes an `acdc4robot-export-report.json` provenance report. See the
+writes an `acdc4robot-export-report.json` provenance report. Version 1.1.1 also
+reports grounded endpoints, missing joint origins, and unsupported joint types
+with corrective messages instead of secondary Python failures. See the
 [MJCF export guide](docs/MJCF_EXPORT.md) for the supported assembly structure,
 verification status, and the deliberate boundary between CAD export and
 application-specific actuator/contact modeling.
@@ -113,10 +115,10 @@ To prevent unexpected modification of the original design, it is better to <mark
 - Set the default unit of the design document to `m`
 ![Change Units](./pictures/ChangeUnits.png)
 - For a self-contained design, use `Break Link` to make an *external component*
-  internal. MJCF 1.1.0 can export referenced occurrences, but records a warning
+  internal. MJCF 1.1.1 can export referenced occurrences, but records a warning
   because their source revisions must be frozen for reproducibility.
 ![Break Link](./pictures/BreakLink.gif)
-- Repeated occurrences are supported by MJCF 1.1.0 and receive distinct export
+- Repeated occurrences are supported by MJCF 1.1.1 and receive distinct export
   names. Other export formats have not been revalidated for this behavior; use
   `Make Independent` if you encounter a format-specific problem.
 ![Make Independent](./pictures/MakeIndependent.gif)

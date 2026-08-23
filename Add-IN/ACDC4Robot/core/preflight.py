@@ -9,6 +9,7 @@ import json
 import os
 
 from . import utils
+from .joint import Joint as ExportJoint
 from ..version import __version__
 
 
@@ -168,9 +169,21 @@ def inspect_mjcf_design(design):
     active_dof_count = 0
 
     for joint in joints:
-        parent = getattr(joint, "occurrenceTwo", None)
-        child = getattr(joint, "occurrenceOne", None)
-        joint_type = joint.jointMotion.jointType
+        try:
+            wrapped_joint = ExportJoint(joint)
+            parent = wrapped_joint.parent
+            child = wrapped_joint.child
+        except Exception as exc:
+            errors.append(f"Joint {getattr(joint, 'name', '<unknown>')} endpoints cannot be read: {exc}")
+            continue
+        try:
+            joint_type = joint.jointMotion.jointType
+        except Exception as exc:
+            errors.append(
+                f"Joint {wrapped_joint.name} motion cannot be read: {exc}. "
+                "The Fusion joint may be broken; recreate it before export."
+            )
+            continue
         joint_type_name = _JOINT_TYPES.get(joint_type, f"unknown-{joint_type}")
         joint_export_name = utils.get_valid_filename(joint.name)
         joint_export_names.setdefault(joint_export_name, []).append(joint.name)
@@ -189,12 +202,21 @@ def inspect_mjcf_design(design):
 
         if parent is None or child is None:
             errors.append(
-                f"Joint {joint.name} is not between two component occurrences; "
-                "connect the moving component to the servo/base occurrence."
+                f"Joint {joint.name} is not between two component occurrences. "
+                "Move grounded/root bodies into a component such as 'base_link' "
+                "and create the joint between component occurrences."
             )
             continue
         if joint_type not in _SUPPORTED_JOINT_TYPES:
-            errors.append(f"Joint {joint.name} uses unsupported type {joint_type_name}.")
+            errors.append(
+                f"Joint {joint.name} uses unsupported type {joint_type_name}. "
+                "Only rigid, revolute, and slider joints can be exported."
+            )
+        if joint_type in (1, 2) and not wrapped_joint.has_origin():
+            errors.append(
+                f"Joint {joint.name} has no usable origin geometry. Recreate the "
+                "moving joint or define a valid joint origin before export."
+            )
         if parent_path not in occurrence_by_path:
             errors.append(f"Joint {joint.name} parent {parent_path} is not an exported visible link.")
         if child_path not in occurrence_by_path:

@@ -13,6 +13,39 @@ adsk = types.ModuleType("adsk")
 adsk.core = types.ModuleType("adsk.core")
 adsk.fusion = types.ModuleType("adsk.fusion")
 adsk.fusion.Component = type("FusionComponent", (), {})
+adsk.fusion.Joint = type("FusionJoint", (), {})
+adsk.fusion.AsBuiltJoint = type("FusionAsBuiltJoint", (), {})
+adsk.fusion.Occurrence = type("FusionOccurrence", (), {})
+adsk.fusion.JointList = type("FusionJointList", (), {})
+
+
+class FusionJointOrigin:
+    def __init__(self, geometry):
+        self.geometry = geometry
+
+
+adsk.fusion.JointOrigin = FusionJointOrigin
+
+
+class Vector:
+    def __init__(self, x=0.0, y=0.0, z=1.0):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.values = [x, y, z]
+
+    def asArray(self):
+        return list(self.values)
+
+
+class Point(Vector):
+    @classmethod
+    def create(cls, x, y, z):
+        return cls(x, y, z)
+
+
+adsk.core.Vector3D = Vector
+adsk.core.Point3D = Point
 
 
 class FusionMatrix:
@@ -50,6 +83,13 @@ class FusionMatrix:
     def setCell(self, row, column, value):
         self.values[row][column] = value
 
+    def setWithCoordinateSystem(self, origin, x_axis, y_axis, z_axis):
+        self.values[0][3], self.values[1][3], self.values[2][3] = origin.asArray()
+
+    @property
+    def translation(self):
+        return Point(self.values[0][3], self.values[1][3], self.values[2][3])
+
 
 adsk.core.Matrix3D = FusionMatrix
 sys.modules.setdefault("adsk", adsk)
@@ -57,6 +97,7 @@ sys.modules.setdefault("adsk.core", adsk.core)
 sys.modules.setdefault("adsk.fusion", adsk.fusion)
 
 from ACDC4Robot.core import math_operation, preflight, utils  # noqa: E402
+from ACDC4Robot.core.joint import Joint as ExportJoint  # noqa: E402
 
 
 class Collection:
@@ -101,6 +142,7 @@ class Occurrence:
         self.component = Component(path.split(":")[0], is_solid=is_solid, mesh_only=mesh_only)
         self.isLightBulbOn = True
         self.childOccurrences = Collection([])
+        self.joints = Collection([])
         self.transform2 = FusionMatrix()
         self.isReferencedComponent = referenced
 
@@ -108,15 +150,28 @@ class Occurrence:
 class Motion:
     def __init__(self, joint_type):
         self.jointType = joint_type
+        self.rotationAxisVector = Vector(0.0, 0.0, 1.0)
+        self.slideDirectionVector = Vector(1.0, 0.0, 0.0)
+        self.primarySlideDirectionVector = Vector(1.0, 0.0, 0.0)
+        self.secondarySlideDirectionVector = Vector(0.0, 1.0, 0.0)
+
+
+class Geometry:
+    def __init__(self):
+        self.origin = Point(0.0, 0.0, 0.0)
+        self.primaryAxisVector = Vector(0.0, 0.0, 1.0)
+        self.secondaryAxisVector = Vector(1.0, 0.0, 0.0)
+        self.thirdAxisVector = Vector(0.0, 1.0, 0.0)
 
 
 class Joint:
-    def __init__(self, name, parent, child, joint_type):
+    def __init__(self, name, parent, child, joint_type, geometry=None):
         self.name = name
         self.occurrenceTwo = parent
         self.occurrenceOne = child
         self.jointMotion = Motion(joint_type)
         self.objectType = "adsk::fusion::Joint"
+        self.geometryOrOriginTwo = Geometry() if geometry is None else geometry
 
 
 class Root:
@@ -187,14 +242,14 @@ class MJCFExportPatchTests(unittest.TestCase):
     def test_report_contains_release_identity(self):
         report = preflight.inspect_mjcf_design(Design([self.servo], []))
         self.assertTrue(report["passed"], report["errors"])
-        self.assertEqual(report["plugin_version"], "1.1.0")
+        self.assertEqual(report["plugin_version"], "1.1.1")
         self.assertEqual(report["active_dof_count"], 0)
         self.assertIn("exported model is rigid", " ".join(report["warnings"]))
 
     def test_fusion_manifest_matches_python_release_identity(self):
         manifest_path = REPOSITORY_ROOT / "Add-IN" / "ACDC4Robot" / "ACDC4Robot.manifest"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        self.assertEqual(manifest["version"], "1.1.0")
+        self.assertEqual(manifest["version"], "1.1.1")
         self.assertEqual(manifest["type"], "addin")
         self.assertEqual(manifest["supportedOS"], "windows|mac")
 
@@ -228,6 +283,49 @@ class MJCFExportPatchTests(unittest.TestCase):
         report = preflight.inspect_mjcf_design(design)
         self.assertFalse(report["passed"])
         self.assertIn("Duplicate joint export name hinge", " ".join(report["errors"]))
+
+    def test_joint_origin_wrapper_is_unwrapped(self):
+        geometry = Geometry()
+        wrapped = Joint(
+            "servo_hinge",
+            self.servo,
+            self.link,
+            1,
+            geometry=FusionJointOrigin(geometry),
+        )
+        exported = ExportJoint(wrapped)
+        self.assertIs(exported._origin_geometry(), geometry)
+        self.assertTrue(exported.has_origin())
+
+    def test_grounded_joint_has_actionable_failure(self):
+        exported = ExportJoint(Joint("grounded_hinge", None, self.link, 1))
+        self.assertFalse(exported.is_valid())
+        with self.assertRaisesRegex(ValueError, "two component occurrences"):
+            exported.get_parent()
+
+    def test_unsupported_joint_type_has_actionable_failure(self):
+        exported = ExportJoint(Joint("cylindrical_joint", self.servo, self.link, 3))
+        with self.assertRaisesRegex(ValueError, "Cylindrical"):
+            exported.get_mjcf_joint_type()
+        self.assertEqual(exported.get_axes(), ([0.0, 0.0, 1.0], None))
+
+    def test_ball_joint_axis_accessor_always_returns_tuple(self):
+        exported = ExportJoint(Joint("ball_joint", self.servo, self.link, 6))
+        self.assertEqual(exported.get_axes(), (None, None))
+
+    def test_rigid_as_built_joint_without_origin_uses_occurrence_frames(self):
+        self.link.transform2 = FusionMatrix.translated(5.0, 0.0, 0.0)
+        joint = Joint("rigid_fixture", self.servo, self.link, 0, geometry=False)
+        joint.geometryOrOriginTwo = None
+        pose = ExportJoint(joint).get_urdf_origin()
+        self.assertEqual(pose[:3], [0.05, 0.0, 0.0])
+
+    def test_moving_joint_without_origin_fails_preflight(self):
+        joint = Joint("missing_origin", self.servo, self.link, 1, geometry=False)
+        joint.geometryOrOriginTwo = None
+        report = preflight.inspect_mjcf_design(Design([self.servo, self.link], [joint]))
+        self.assertFalse(report["passed"])
+        self.assertIn("no usable origin geometry", " ".join(report["errors"]))
 
 
 if __name__ == "__main__":
