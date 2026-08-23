@@ -51,6 +51,40 @@ def _has_visible_bodies(occurrence):
     return occurrence.isLightBulbOn and utils.component_has_bodies(occurrence.component)
 
 
+def _visible_geometry_profile(component):
+    """Count geometry types that Fusion exposes for an occurrence component."""
+    visible_brep = [
+        body
+        for body in _collection_items(component.bRepBodies)
+        if getattr(body, "isLightBulbOn", True)
+    ]
+    visible_mesh = [
+        body
+        for body in _collection_items(component.meshBodies)
+        if getattr(body, "isLightBulbOn", True)
+    ]
+    solid_count = 0
+    surface_count = 0
+    unknown_brep_count = 0
+    for body in visible_brep:
+        try:
+            is_solid = body.isSolid
+        except (AttributeError, RuntimeError):
+            is_solid = None
+        if is_solid is True:
+            solid_count += 1
+        elif is_solid is False:
+            surface_count += 1
+        else:
+            unknown_brep_count += 1
+    return {
+        "visible_solid_brep_count": solid_count,
+        "visible_surface_brep_count": surface_count,
+        "visible_unknown_brep_count": unknown_brep_count,
+        "visible_mesh_body_count": len(visible_mesh),
+    }
+
+
 def _matrix_values(matrix):
     return [matrix.getCell(row, column) for row in range(4) for column in range(4)]
 
@@ -89,12 +123,14 @@ def inspect_mjcf_design(design):
         export_name = utils.get_valid_filename(path)
         export_names.setdefault(export_name, []).append(path)
         referenced = _is_referenced(occurrence)
+        geometry_profile = _visible_geometry_profile(occurrence.component)
         occurrence_records.append(
             {
                 "full_path_name": path,
                 "export_name": export_name,
                 "component_name": occurrence.component.name,
                 "body_count": occurrence.component.bRepBodies.count,
+                **geometry_profile,
                 "child_occurrence_count": occurrence.childOccurrences.count,
                 "referenced_component": referenced,
                 "transform_fusion_internal_cm": _matrix_values(occurrence.transform2),
@@ -103,6 +139,19 @@ def inspect_mjcf_design(design):
         if occurrence.childOccurrences.count:
             errors.append(
                 f"{path} contains nested occurrences; flatten the robot assembly before MJCF export."
+            )
+        if geometry_profile["visible_surface_brep_count"]:
+            errors.append(
+                f"{path} contains {geometry_profile['visible_surface_brep_count']} visible surface "
+                "BRep body/bodies. Convert them to solid bodies before STL/MJCF export."
+            )
+        if geometry_profile["visible_mesh_body_count"] and not (
+            geometry_profile["visible_solid_brep_count"]
+            or geometry_profile["visible_unknown_brep_count"]
+        ):
+            errors.append(
+                f"{path} contains only Fusion mesh bodies. Convert them to solid BRep bodies "
+                "before STL/MJCF export."
             )
 
     for export_name, paths in export_names.items():

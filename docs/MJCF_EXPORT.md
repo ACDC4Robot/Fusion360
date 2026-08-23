@@ -8,6 +8,8 @@ physical properties, and supported joint kinematics.
 
 - Use a flat occurrence structure. Nested occurrences fail preflight.
 - Every visible link must contain at least one body.
+- Exportable geometry must be a solid BRep body. Surface BRep and Fusion mesh
+  bodies are rejected before STL export.
 - Give every occurrence and joint a unique name.
 - Connect visible links as one tree using rigid, revolute, or slider joints.
 - In a Fusion joint, occurrence one becomes the child and occurrence two the

@@ -14,6 +14,10 @@
   the invalid `time.stop` call.
 - Stop generating a floor at the Fusion world origin, which could intersect an
   exported assembly.
+- Avoid mutating Fusion occurrence transforms while calculating relative body
+  frames, adopting the defect analysis from pull request #13.
+- Reject surface BRep and mesh-only occurrences during MJCF preflight instead
+  of failing later with Fusion's `invalid geometry` STL error.
 - Remove a committed developer-specific Fusion Python path.
 
 ### Added

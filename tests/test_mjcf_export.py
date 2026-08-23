@@ -13,11 +13,50 @@ adsk = types.ModuleType("adsk")
 adsk.core = types.ModuleType("adsk.core")
 adsk.fusion = types.ModuleType("adsk.fusion")
 adsk.fusion.Component = type("FusionComponent", (), {})
+
+
+class FusionMatrix:
+    def __init__(self, values=None):
+        self.values = values or [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+
+    @classmethod
+    def create(cls):
+        return cls()
+
+    @classmethod
+    def translated(cls, x, y, z):
+        matrix = cls()
+        matrix.values[0][3] = x
+        matrix.values[1][3] = y
+        matrix.values[2][3] = z
+        return matrix
+
+    def copy(self):
+        return FusionMatrix([row[:] for row in self.values])
+
+    def invert(self):
+        self.values[0][3] *= -1.0
+        self.values[1][3] *= -1.0
+        self.values[2][3] *= -1.0
+
+    def getCell(self, row, column):
+        return self.values[row][column]
+
+    def setCell(self, row, column, value):
+        self.values[row][column] = value
+
+
+adsk.core.Matrix3D = FusionMatrix
 sys.modules.setdefault("adsk", adsk)
 sys.modules.setdefault("adsk.core", adsk.core)
 sys.modules.setdefault("adsk.fusion", adsk.fusion)
 
-from ACDC4Robot.core import preflight, utils  # noqa: E402
+from ACDC4Robot.core import math_operation, preflight, utils  # noqa: E402
 
 
 class Collection:
@@ -42,30 +81,27 @@ class IterableOnly:
         return iter(self.values)
 
 
-class Matrix:
-    def getCell(self, row, column):
-        return 1.0 if row == column else 0.0
-
-
 class Body:
-    isLightBulbOn = True
+    def __init__(self, is_solid=True):
+        self.isLightBulbOn = True
+        self.isSolid = is_solid
 
 
 class Component:
-    def __init__(self, name):
+    def __init__(self, name, is_solid=True, mesh_only=False):
         self.name = name
-        self.bRepBodies = Collection([Body()])
-        self.meshBodies = Collection([])
+        self.bRepBodies = Collection([] if mesh_only else [Body(is_solid=is_solid)])
+        self.meshBodies = Collection([Body()] if mesh_only else [])
         self.isBodiesFolderLightBulbOn = True
 
 
 class Occurrence:
-    def __init__(self, path, referenced=True):
+    def __init__(self, path, referenced=True, is_solid=True, mesh_only=False):
         self.fullPathName = path
-        self.component = Component(path.split(":")[0])
+        self.component = Component(path.split(":")[0], is_solid=is_solid, mesh_only=mesh_only)
         self.isLightBulbOn = True
         self.childOccurrences = Collection([])
-        self.transform2 = Matrix()
+        self.transform2 = FusionMatrix()
         self.isReferencedComponent = referenced
 
 
@@ -128,6 +164,25 @@ class MJCFExportPatchTests(unittest.TestCase):
 
     def test_iterable_only_joint_vector_is_supported(self):
         self.assertEqual(preflight._collection_items(IterableOnly([1, 2])), [1, 2])
+
+    def test_coordinate_transform_does_not_mutate_source_frame(self):
+        source = FusionMatrix.translated(2.0, 0.0, 0.0)
+        target = FusionMatrix.translated(5.0, 0.0, 0.0)
+        result = math_operation.coordinate_transform(source, target)
+        self.assertEqual(source.getCell(0, 3), 2.0)
+        self.assertEqual(result.getCell(0, 3), 3.0)
+
+    def test_surface_brep_is_rejected_before_export(self):
+        surface = Occurrence("SurfacePart:1", is_solid=False)
+        report = preflight.inspect_mjcf_design(Design([surface], []))
+        self.assertFalse(report["passed"])
+        self.assertIn("surface BRep", " ".join(report["errors"]))
+
+    def test_mesh_only_occurrence_is_rejected_before_export(self):
+        mesh = Occurrence("MeshPart:1", mesh_only=True)
+        report = preflight.inspect_mjcf_design(Design([mesh], []))
+        self.assertFalse(report["passed"])
+        self.assertIn("only Fusion mesh bodies", " ".join(report["errors"]))
 
     def test_report_contains_release_identity(self):
         report = preflight.inspect_mjcf_design(Design([self.servo], []))
