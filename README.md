@@ -14,13 +14,15 @@ We are currently doing a survey on robot description formats and the user experi
 </div> -->
 
 ## Introduction
-Robot description format (RDF) contains information about robot model which is required by simulation, visualization, planning etc. In this project, we provide a Fusion360 Add-In for generating robot description files automatically from robot design. 
+Robot description formats encode the geometry, kinematics, and physical
+properties required for simulation, visualization, and planning. ACDC4Robot is
+a Fusion 360 Add-In that exports these descriptions directly from a robot CAD
+assembly.
 
-Currently, this Add-In supports exporting URDF, SDFormat, and MJCF. 
-URDF (Unified Robotics Description Format) has been the most widely used robot description format, but has several limitations and lack of update. 
-SDFormat (Simulation Description Format) has more features than URDF, such as supporting closed loop chain mechanism. SDFormat has been a seperated project from Gazebo aims to be a simulator indenpendt format but still not as popular as URDF. 
-MJCF is a robot description format used in simulator MuJoCo and has been support by more simulators such as Nvidia Isaac Sim. It also has more features then URDF to provide more robotic system information. 
-Other robot description formats might be supported in the future.
+The Add-In exports URDF, SDFormat (SDF), and MJCF, and also exposes an
+experimental URDF+ option. Version 1.1.1 has its strongest current validation
+on the Fusion→MJCF→MuJoCo path. URDF, SDF, URDF+, and target-simulator behavior
+should be independently checked for the intended application.
 
 The companion [ACDC4Robot RobotLibrary](https://github.com/ACDC4Robot/RobotLibrary)
 provides reusable Fusion 360 robot models for design, simulation, and learning.
@@ -57,7 +59,8 @@ These are roadmap directions, not committed release dates. Issues and pull
 requests with reproducible Fusion fixtures are especially helpful.
 
 ## Key Features
-Export robot description files from Fusion360 design file directly with GUI panel.
+Export robot description files directly from a Fusion 360 design using a GUI
+panel.
 
 <!-- - Support 3 Fusion360 joint motion types:
     - Fixed joint type
@@ -67,6 +70,7 @@ Export robot description files from Fusion360 design file directly with GUI pane
     - [URDF](http://wiki.ros.org/urdf/XML) (Unified Robotics Description Format)
     - [SDFormat](http://sdformat.org/spec) (Simulation Description Format) or SDF
     - [MJCF](https://mujoco.readthedocs.io/en/latest/XMLreference.html) (MuJoCo Format)
+    - URDF+ (experimental; not part of the v1.1.1 regression scope)
 - A companion [robot model library](https://github.com/ACDC4Robot/RobotLibrary)
   containing various robot types:
   - Robot Arm
@@ -84,7 +88,23 @@ App Store package, or manually from source.
 Download the current installable ZIP and checksum from
 [GitHub Releases](https://github.com/ACDC4Robot/Fusion360/releases). GitHub is
 the supported update channel and contains fixes that may not be present in the
-older Autodesk App Store package.
+older Autodesk App Store package. For v1.1.1, download
+`ACDC4Robot-1.1.1.zip` and its `.sha256` file, verify the checksum, unzip it,
+and copy the resulting top-level `ACDC4Robot` folder into Fusion's Add-Ins
+directory. Do not copy the ZIP itself or create a doubly nested
+`ACDC4Robot/ACDC4Robot` directory.
+
+Verify the downloaded ZIP on macOS/Linux with:
+
+```bash
+shasum -a 256 ACDC4Robot-1.1.1.zip
+```
+
+On Windows PowerShell, use:
+
+```powershell
+Get-FileHash .\ACDC4Robot-1.1.1.zip -Algorithm SHA256
+```
 
 ### Autodesk App Store (legacy distribution)
 
@@ -95,15 +115,15 @@ current behavior and reproducible checksums.
 
 ### Manual installation
 
-Download and copy the `/Add-IN/ACDC4Robot` folder into Fusion 360's Add-In
-directory, which is shown under
+Clone or download this repository and copy the `Add-IN/ACDC4Robot` folder into
+Fusion 360's Add-Ins directory, which is shown under
 `Preferences -> General -> API -> Default Path for Scripts and Add-Ins`.
 
 Release maintainers can create a deterministic, directly installable archive
 with `python3 scripts/build_addin_release.py`. Unzip it and copy the resulting
 `ACDC4Robot` folder into the same add-in directory.
 
-In default it should be at:
+The default locations are:
 
 Windows:
 ```
@@ -114,27 +134,19 @@ Mac:
 ```
 $HOME/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns
 ```
-or it can be found at `Preferences -> General -> API -> Default Path for Scripts and Add-Ins`.
-
-<!-- ### Installation Using Shell Command
-Windows (PowerShell):
-```PowerShell
-cd <path to /Add-In/Fusion2Robot>
-Copy-Item ".\Fusion2Robot\" -Destination "${env:APPDATA}\Autodesk\Autodesk Fusion 360\API\AddIns\" -Recurse
-```
-
-macOS (Terminal):
-```bash
-cd <path to /Add-In/Fusion2Robot>
-cp -r ./Fusion2Robot "$HOME/Library/Application Support/Autodesk/Autodesk Fusion 360/API/AddIns/"
-``` -->
+If Fusion uses a customized location, use the path reported under
+`Preferences -> General -> API -> Default Path for Scripts and Add-Ins`.
 
 ### First Run
-After installation for the first time, use `Shift+S` or click `UTILITIES -> Add-Ins -> Scripts and Add-Ins` to open `Scripts and Add-Ins` window.
+Restart Fusion after installing or replacing the Add-In. The v1.1.1 manifest
+enables `Run on Startup`; if ACDC4Robot is not running, press `Shift+S` or open
+`UTILITIES -> Add-Ins -> Scripts and Add-Ins`, find `ACDC4Robot` under
+`Add-Ins -> My Add-Ins`, and click `Run`.
 
-Find `ACDC4Robot` at `Add-Ins -> My Add-Ins`, select `ACDC4Robot` and click `Run` (for normal use, select `Run on Startup`). Then the icon will appear beside `UTILITIES -> Add-Ins icon`.
+The promoted `ACDC4Robot` command appears in the Design workspace's
+`UTILITIES -> Add-Ins` panel beside `Scripts and Add-Ins`.
 ![Run the Add-In](./pictures/RunAdd-In.gif)
-Click the icon to start exporting process from the current design.
+Click the command to begin exporting the active design.
 
 
 ## Usage
@@ -150,15 +162,33 @@ with corrective messages instead of secondary Python failures. See the
 verification status, and the deliberate boundary between CAD export and
 application-specific actuator/contact modeling.
 
-### Before Using This Add-In
-Before exporting robot description files, please follow the following instructions to make sure the design file is suitable to execute this add-in. 
+### Format and target choices
 
-To prevent unexpected modification of the original design, it is better to <mark>run this add-in in a copy of the design file</mark>.
+| Export format | Target selection used by the Add-In | v1.1.1 status |
+| --- | --- | --- |
+| URDF | Gazebo, PyBullet, or MuJoCo | Available; not revalidated in the v1.1.1 regression suite |
+| SDFormat | Gazebo or PyBullet | Available; not revalidated in the v1.1.1 regression suite |
+| MJCF | MuJoCo | Current regression-tested path |
+| URDF+ | Target selection is not used | Experimental |
 
-- Exit parametric mode: right click the root component of the design, choose `Do not capture Design History`
-![Do not capture Design History](./pictures/DoNotCaptureDesignHistory.PNG)
-- Set the default unit of the design document to `m`
-![Change Units](./pictures/ChangeUnits.png)
+An incompatible format/target selection is rejected with a Fusion message.
+
+### Prepare a design for MJCF 1.1.1
+
+The MJCF exporter reads Fusion's internal centimetre-based API values and
+converts model quantities to SI units; the document's display unit does not
+need to be metres. Parametric and direct-modeling documents are both accepted,
+so disabling design history is not a prerequisite. Running the exporter on a
+copy remains good practice when preparing or restructuring an assembly.
+
+- Use a flat top-level occurrence structure. Each visible occurrence must
+  contain solid BRep geometry; nested occurrences, surface-only components,
+  and mesh-only components fail the MJCF preflight.
+- Connect the visible occurrences as one tree with rigid, revolute, or slider
+  joints. A joint cannot connect directly to Fusion root/ground; represent the
+  fixed structure as a component such as `base_link`.
+- Give occurrences and joints unique names. Moving joints require a valid
+  Fusion joint origin.
 - For a self-contained design, use `Break Link` to make an *external component*
   internal. MJCF 1.1.1 can export referenced occurrences, but records a warning
   because their source revisions must be frozen for reproducibility.
@@ -169,25 +199,47 @@ To prevent unexpected modification of the original design, it is better to <mark
 ![Make Independent](./pictures/MakeIndependent.gif)
 - Make sure all components are named with alphanumeric characters, underscores
   `_`, or hyphens `-`. Other characters may cause compatibility problems.
-- Components must be joined in a **flat** assembly structure for reliable export.
-  See the [Fusion 360 assembly instructions](./InstructionsForAssembly.md).
+- See the [Fusion 360 assembly instructions](./InstructionsForAssembly.md) and
+  the stricter [MJCF export guide](docs/MJCF_EXPORT.md) before exporting.
 
-### After Setting Up Design File
-Click the add-in icon, then chose the robot description format and targeted simulation platform to export.
+### Export the active design
+
+1. Open the prepared design in Fusion's Design workspace and click
+   `ACDC4Robot`.
+2. Select a description format and target environment. For the validated
+   v1.1.1 path, select `MJCF` and `MuJoCo`.
+3. Choose a dedicated parent output folder. ACDC4Robot creates or reuses a
+   sanitized document-name subfolder, so use a clean destination to avoid
+   mixing files from an earlier export.
+4. For MJCF, correct every preflight error and export again. A successful
+   export contains `<model-name>.xml`, STL visual meshes, and
+   `acdc4robot-export-report.json`.
+5. Load the exported model in MuJoCo and review the report, geometry, inertias,
+   joint axes, and limits. Add actuators, sensors, joint dynamics, and explicit
+   collision geometry in a reviewed downstream MJCF layer; ACDC4Robot does not
+   infer them from CAD.
+
 ![Execute Fusion 360 Add-In](./pictures/ExcuteAdd-In.gif)
 
 ## Tested Examples
+
+The examples below document earlier URDF/SDF workflows. They have not been
+revalidated as part of the v1.1.1 MJCF regression suite and should be tested in
+the current target simulator before use. The SDF closed-chain example does not
+imply MJCF closed-chain support; the v1.1.1 MJCF preflight requires one
+connected tree.
+
 ### Closed Chain Linkages
-- Test a closed loop linkages in Gazebo to show the ability of SDFormat to describe a closed-chain mechanism
+- Historical Gazebo test showing an SDFormat closed-chain mechanism
 ![Test Four Bar Linkages](./pictures/Four-Bar-Linkages-Test.png)
 
 ### Robot Manipulator: UR5e
-- Test a UR5e manipulator in Gazebo
+- Historical UR5e test in Gazebo
 ![Test UR5e manipulator](./pictures/UR5e-Test.png)
 
 ### Robot Gripper: Robotiq-2F85-Gripper
-- Test Robotiq-2F85 Gripper in Gazebo
-![Test Robotiq-2F85 Gripper](./pictures//Robotiq-Gripper-Test.png)
+- Historical Robotiq 2F-85 gripper test in Gazebo
+![Test Robotiq-2F85 Gripper](./pictures/Robotiq-Gripper-Test.png)
 
 ## Robot Library
 [🤖 ACDC4Robot RobotLibrary](https://github.com/ACDC4Robot/RobotLibrary)
