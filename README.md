@@ -22,8 +22,39 @@ SDFormat (Simulation Description Format) has more features than URDF, such as su
 MJCF is a robot description format used in simulator MuJoCo and has been support by more simulators such as Nvidia Isaac Sim. It also has more features then URDF to provide more robotic system information. 
 Other robot description formats might be supported in the future.
 
-Also, we provide a Fusion 360 robot model library that can be used out-of-box for design, simulation, and learning. 
-👉[🤖Fusion 360 Robot Library](RobotLibrary.md)
+The companion [ACDC4Robot RobotLibrary](https://github.com/ACDC4Robot/RobotLibrary)
+provides reusable Fusion 360 robot models for design, simulation, and learning.
+
+## Project update and roadmap
+
+### Current update
+
+- **ACDC4Robot v1.1.1 is the current supported GitHub release.** Download the
+  installable plugin and checksum from the
+  [v1.1.1 release page](https://github.com/ACDC4Robot/Fusion360/releases/tag/v1.1.1).
+- The Fusion→MJCF→MuJoCo path now preserves repeated occurrence identities,
+  runs a fail-closed assembly preflight, records an export provenance report,
+  and gives actionable errors for grounded endpoints, missing joint origins,
+  unsupported joint types, disconnected assemblies, and unsupported geometry.
+- GitHub Releases are the canonical update channel. We do not currently plan
+  an Autodesk App Store update, so the App Store build may be older.
+- Reusable robot designs are maintained separately in the
+  [ACDC4Robot RobotLibrary](https://github.com/ACDC4Robot/RobotLibrary).
+
+### Future directions
+
+- expand live Fusion regression fixtures and automated export checks;
+- improve format-specific URDF, SDF, and simulator compatibility without
+  weakening the current MJCF validation contract;
+- investigate broader nested-assembly support after reproducible fixtures are
+  available;
+- add an optional, reproducible collision-mesh workflow for contact-rich
+  applications while keeping visual and collision assets distinct;
+- continue improving documentation, examples, and community-contributed robot
+  models through this repository and the RobotLibrary.
+
+These are roadmap directions, not committed release dates. Issues and pull
+requests with reproducible Fusion fixtures are especially helpful.
 
 ## Key Features
 Export robot description files from Fusion360 design file directly with GUI panel.
@@ -36,7 +67,8 @@ Export robot description files from Fusion360 design file directly with GUI pane
     - [URDF](http://wiki.ros.org/urdf/XML) (Unified Robotics Description Format)
     - [SDFormat](http://sdformat.org/spec) (Simulation Description Format) or SDF
     - [MJCF](https://mujoco.readthedocs.io/en/latest/XMLreference.html) (MuJoCo Format)
-- An [robot model library](RobotLibrary.md) including various robot types:
+- A companion [robot model library](https://github.com/ACDC4Robot/RobotLibrary)
+  containing various robot types:
   - Robot Arm
   - Gripper
   - Mobile Robot
@@ -44,15 +76,28 @@ Export robot description files from Fusion360 design file directly with GUI pane
   - Humanoid
 
 ## Installation
-You can install this Add-In form Autodesk Fusion app store or manually.
+Install the Add-In from GitHub Releases (recommended), from the legacy Autodesk
+App Store package, or manually from source.
 
-### Installation form Autodesk App Store
-You can download [ACDC4Robot](https://apps.autodesk.com/FUSION/en/Detail/Index?id=5028052292896011577) from Autodesk Fusion App Store, Windows and Mac version are provided.
+### GitHub release (recommended)
 
-Due to the review process of app store, ACDC4Robot at app store might not update in the same frequence as this repository. So updates such as new features and bug fix might be late for ACDC4Robot app store version.
+Download the current installable ZIP and checksum from
+[GitHub Releases](https://github.com/ACDC4Robot/Fusion360/releases). GitHub is
+the supported update channel and contains fixes that may not be present in the
+older Autodesk App Store package.
 
-### Manually Installation
-Download and copy `/Add-IN/ACDC4Robot` folder into Fusion360's Add-in directory which can be found at `Preferences -> General -> API -> Default Path for Scripts and Add-Ins`.
+### Autodesk App Store (legacy distribution)
+
+An earlier Windows/macOS package remains available from the
+[Autodesk Fusion App Store](https://apps.autodesk.com/FUSION/en/Detail/Index?id=5028052292896011577),
+but no immediate App Store update is planned. Prefer the GitHub release for
+current behavior and reproducible checksums.
+
+### Manual installation
+
+Download and copy the `/Add-IN/ACDC4Robot` folder into Fusion 360's Add-In
+directory, which is shown under
+`Preferences -> General -> API -> Default Path for Scripts and Add-Ins`.
 
 Release maintainers can create a deterministic, directly installable archive
 with `python3 scripts/build_addin_release.py`. Unzip it and copy the resulting
@@ -122,8 +167,10 @@ To prevent unexpected modification of the original design, it is better to <mark
   names. Other export formats have not been revalidated for this behavior; use
   `Make Independent` if you encounter a format-specific problem.
 ![Make Independent](./pictures/MakeIndependent.gif)
-- - Make sure all the components are named with alphanumeric characters, underscore character `_`, and hyphe character `-`. Other languages and characters might cause problems.
-- - Components need to be joint together with a **flat** structure in order to export the robot description files properly. Please check the [instructions for Fusion360 Assembly](./InstructionsForAssembly.md).
+- Make sure all components are named with alphanumeric characters, underscores
+  `_`, or hyphens `-`. Other characters may cause compatibility problems.
+- Components must be joined in a **flat** assembly structure for reliable export.
+  See the [Fusion 360 assembly instructions](./InstructionsForAssembly.md).
 
 ### After Setting Up Design File
 Click the add-in icon, then chose the robot description format and targeted simulation platform to export.
@@ -143,29 +190,47 @@ Click the add-in icon, then chose the robot description format and targeted simu
 ![Test Robotiq-2F85 Gripper](./pictures//Robotiq-Gripper-Test.png)
 
 ## Robot Library
-[🤖Fusion 360 Robot Library](RobotLibrary.md)
+[🤖 ACDC4Robot RobotLibrary](https://github.com/ACDC4Robot/RobotLibrary)
 
-We also provides some robot models that assembled manually, and tested the Add-In with these models. 
-This robot library is continuing update, it is welcome to contribute this library.
+The companion repository contains reusable Fusion 360 robot models intended to
+reduce repeated assembly work and support exporter examples. Contributions of
+well-documented models, source revisions, and validated exports are welcome.
+The [legacy in-repository index](RobotLibrary.md) is retained for historical
+context.
 
 ## Citation
-For BibTex:
+
+If ACDC4Robot or the RobotLibrary supports your research, teaching, or robot
+development workflow, please cite the peer-reviewed paper:
+
+- [IEEE Xplore](https://ieeexplore.ieee.org/document/10715835/)
+- [DOI: 10.1109/ICARM62033.2024.10715835](https://doi.org/10.1109/ICARM62033.2024.10715835)
+- [arXiv preprint: 2312.12295](https://arxiv.org/abs/2312.12295)
+
+### BibTeX
+
 ```
-@INPROCEEDINGS{10715835,
-  author={Qiu, Nuofan and Song, Chaoyang and Wan, Fang},
-  booktitle={2024 International Conference on Advanced Robotics and Mechatronics (ICARM)}, 
-  title={Describing Robots from Design to Learning: Towards an Interactive Lifecycle Representation of Robots}, 
-  year={2024},
-  volume={},
-  number={},
-  pages={1081-1086},
-  keywords={Solid modeling;Mechatronics;Codes;Automation;Pipelines;Morphology;Transforms;Software;Libraries;Robots},
-  doi={10.1109/ICARM62033.2024.10715835}}
+@inproceedings{qiu2024describing,
+  author    = {Qiu, Nuofan and Song, Chaoyang and Wan, Fang},
+  title     = {Describing Robots from Design to Learning: Towards an
+               Interactive Lifecycle Representation of Robots},
+  booktitle = {2024 International Conference on Advanced Robotics and
+               Mechatronics (ICARM)},
+  year      = {2024},
+  pages     = {1081--1086},
+  doi       = {10.1109/ICARM62033.2024.10715835},
+  url       = {https://doi.org/10.1109/ICARM62033.2024.10715835}
+}
 ```
 
-Plain Text:
+### Plain text
+
 ```
-N. Qiu, C. Song and F. Wan, "Describing Robots from Design to Learning: Towards an Interactive Lifecycle Representation of Robots," 2024 International Conference on Advanced Robotics and Mechatronics (ICARM), Tokyo, Japan, 2024, pp. 1081-1086, doi: 10.1109/ICARM62033.2024.10715835. keywords: {Solid modeling;Mechatronics;Codes;Automation;Pipelines;Morphology;Transforms;Software;Libraries;Robots},
+N. Qiu, C. Song, and F. Wan, “Describing Robots from Design to Learning:
+Towards an Interactive Lifecycle Representation of Robots,” in 2024
+International Conference on Advanced Robotics and Mechatronics (ICARM),
+Tokyo, Japan, 2024, pp. 1081–1086,
+doi: 10.1109/ICARM62033.2024.10715835.
 ```
 
 ## Reference
