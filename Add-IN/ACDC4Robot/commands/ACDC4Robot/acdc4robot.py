@@ -29,35 +29,43 @@ def get_link_joint_list(design: adsk.fusion.Design):
     root = design.rootComponent
     link_list = []
     joint_list = []
-    occs: adsk.fusion.OccurrenceList = root.allOccurrences
-    
-    # try to solve the nested components problem
-    # but still not fully tested
-    for occ in occs:
-        if not utils.component_has_bodies(occ.component):
-            continue
-        # TODO: it seems use occ.joints.count will make it usable with occurrences? Test it
-        if occ.component.joints.count > 0:
-            # textPalette.writeText(str(occ.fullPathName))
-            continue
-        else:
-            # Only occurrence contains zero joint and has zero childOccurrences
-            # can be seen as a link
-            if occ.childOccurrences.count > 0:
-                # textPalette.writeText(str(occ.fullPathName))
-                # textPalette.writeText(str(occ.childOccurrences.count))
-                continue
-            else:
-                # textPalette.writeText(str(occ.fullPathName))
-                # textPalette.writeText(str(occ.childOccurrences.count))
-                if occ.isLightBulbOn:
-                    # only the occurrence light bulb on that the occurrence will be exported
-                    link_list.append(Link(occ)) # add link objects into link_list
 
-    for joint in root.allJoints:
-        joint_list.append(Joint(joint)) # add joint objects into joint_list
-    for joint in root.allAsBuiltJoints:
-        joint_list.append(Joint(joint)) # add joint objects into joint_list
+    # allJoints/allAsBuiltJoints can return the same joint more than once;
+    # a duplicated joint gives a link two parents and breaks the URDF tree
+    all_joints = []
+    seen_joint_names = set()
+    for joint in list(root.allJoints) + list(root.allAsBuiltJoints):
+        if joint.name in seen_joint_names:
+            continue
+        seen_joint_names.add(joint.name)
+        all_joints.append(joint)
+
+    if all_joints:
+        # A link is an occurrence that participates in a joint. The whole
+        # occurrence subtree (nested sub-components included) is exported as
+        # one rigid link: STL export and physical properties of an occurrence
+        # both cover its children, so nested structures need no flattening.
+        # (The previous leaf-occurrence rule skipped every jointed component
+        # that had sub-components, so the URDF referenced links that did not
+        # exist and exported each sub-part as an orphan link.)
+        seen = set()
+        for joint in all_joints:
+            joint_list.append(Joint(joint))
+            for occ in (joint.occurrenceOne, joint.occurrenceTwo):
+                if occ is None:
+                    continue
+                key = occ.fullPathName
+                if key in seen:
+                    continue
+                seen.add(key)
+                link_list.append(Link(occ))
+    else:
+        # no joints: fall back to exporting every leaf occurrence with bodies
+        for occ in root.allOccurrences:
+            if not utils.component_has_bodies(occ.component):
+                continue
+            if occ.childOccurrences.count == 0 and occ.isLightBulbOn:
+                link_list.append(Link(occ))
 
     return link_list, joint_list
 
