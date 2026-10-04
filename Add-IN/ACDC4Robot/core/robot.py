@@ -26,43 +26,13 @@ class Robot():
         return robot_name
 
     def get_links(self, ) -> List[Link]:
-        link_list = []
-        occs: adsk.fusion.OccurrenceList = self.rootComp.allOccurrences
+        from .link_discovery import discover_links
+        occurrences, _ = discover_links(self.rootComp)
+        return [Link(occurrence) for occurrence in occurrences]
 
-        # try to solve the nested components problem
-        # but still not fully tested
-        for occ in occs:
-            if not utils.component_has_bodies(occ.component):
-                continue
-            # TODO: it seems use occ.joints.count will make it usable with occurrences? Test it
-            if occ.component.joints.count > 0:
-                # textPalette.writeText(str(occ.fullPathName))
-                continue
-            else:
-                # Only occurrence contains zero joint and has zero childOccurrences 
-                # can be seen as a link
-                if occ.childOccurrences.count > 0:
-                    # textPalette.writeText(str(occ.fullPathName))
-                    # textPalette.writeText(str(occ.childOccurrences.count))
-                    continue
-                else:
-                    # textPalette.writeText(str(occ.fullPathName))
-                    # textPalette.writeText(str(occ.childOccurrences.count))
-                    if occ.isLightBulbOn:
-                        # only the occurrence light bulb on that the occurrence will be exported
-                        link_list.append(Link(occ)) # add link objects into link_list
-
-        return link_list
-    
-    def get_joints(self, ) -> List[Joint]:
-        joint_list = []
-
-        for joint in self.rootComp.allJoints:
-            joint_list.append(Joint(joint)) # add joint objects into joint_list
-        for joint in self.rootComp.allAsBuiltJoints:
-            joint_list.append(Joint(joint)) # add joint objects into joint_list
-        
-        return joint_list
+    def get_joints(self) -> List[Joint]:
+        from .link_discovery import unique_joints
+        return [Joint(joint) for joint in unique_joints(self.rootComp)]
 
     def get_loop_joints(self,) -> List[Joint]:
         return self.loop_joints

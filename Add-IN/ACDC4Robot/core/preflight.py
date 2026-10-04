@@ -9,6 +9,7 @@ import json
 import os
 
 from . import utils
+from .link_discovery import unique_joints
 from .joint import Joint as ExportJoint
 from .. import i18n
 from ..version import __version__
@@ -112,7 +113,7 @@ def inspect_mjcf_design(design):
         for occurrence in _collection_items(root.allOccurrences)
         if _has_visible_bodies(occurrence)
     ]
-    joints = _collection_items(root.allJoints) + _collection_items(root.allAsBuiltJoints)
+    joints = unique_joints(root)
 
     errors = []
     warnings = []
