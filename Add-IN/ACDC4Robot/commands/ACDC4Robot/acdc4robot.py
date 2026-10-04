@@ -28,6 +28,8 @@ def get_link_joint_list(design: adsk.fusion.Design):
     """
     from ...core.link_discovery import discover_links
     occurrences, joints = discover_links(design.rootComponent)
+    from ...core.serialization import validate_export_names
+    validate_export_names(occurrences)
     return [Link(occurrence) for occurrence in occurrences], [Joint(joint) for joint in joints]
 
 

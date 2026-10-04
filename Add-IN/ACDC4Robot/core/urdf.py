@@ -10,6 +10,7 @@ from xml.etree.ElementTree import Element, SubElement
 import xml.etree.ElementTree as ET
 from . import math_operation as math_op
 from . import utils
+from .serialization import normalize_urdf_numbers
 from .robot import Robot
 
 class URDF():
@@ -91,7 +92,7 @@ class URDF():
         mesh_c = SubElement(geometry_c, "mesh")
         mesh_c.attrib = {"filename": self.get_link_collision_geo(link), "scale": "0.001 0.001 0.001"}
 
-        return link_ele
+        return normalize_urdf_numbers(link_ele)
 
     def get_joint_element(self, joint: Joint) -> Element:
         """
@@ -136,7 +137,7 @@ class URDF():
                                 "effort": "{}".format(limit[2]),
                                 "velocity": "{}".format(limit[3])}
 
-        return joint_ele
+        return normalize_urdf_numbers(joint_ele)
 
     def get_robot_ele(self, ):
         """
@@ -813,7 +814,7 @@ def get_link_element(link: Link) -> Element:
     mesh_c = SubElement(geometry_c, "mesh")
     mesh_c.attrib = {"filename": get_link_collision_geo(link), "scale": "0.001 0.001 0.001"}
 
-    return link_ele
+    return normalize_urdf_numbers(link_ele)
 
 
 def get_joint_name(joint: Joint) -> str:
@@ -1002,4 +1003,4 @@ def get_joint_element(joint: Joint) -> Element:
                             "effort": "{}".format(limit[2]),
                             "velocity": "{}".format(limit[3])}
 
-    return joint_ele
+    return normalize_urdf_numbers(joint_ele)

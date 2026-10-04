@@ -28,6 +28,8 @@ class Robot():
     def get_links(self, ) -> List[Link]:
         from .link_discovery import discover_links
         occurrences, _ = discover_links(self.rootComp)
+        from .serialization import validate_export_names
+        validate_export_names(occurrences)
         return [Link(occurrence) for occurrence in occurrences]
 
     def get_joints(self) -> List[Joint]:
