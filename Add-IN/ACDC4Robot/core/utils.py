@@ -6,6 +6,7 @@ import adsk, adsk.core, adsk.fusion
 import re
 
 from .. import i18n
+from .serialization import export_name
 
 ## https://github.com/django/django/blob/master/django/utils/text.py
 def get_valid_filename(s):
@@ -21,9 +22,7 @@ def get_valid_filename(s):
     # and use ``+`` between nested occurrences.  Removing everything after
     # ``:`` made repeated occurrences collide in MJCF and overwrite one
     # another's STL files.  Preserve hierarchy and instance identity.
-    s = str(s).strip()
-    s = s.replace('+', '__').replace(':', '_').replace(' ', '-')
-    return re.sub(r'(?u)[^-\w.]', '', s)
+    return export_name(s)
 
 
 def log(message: str):
