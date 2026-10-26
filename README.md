@@ -168,6 +168,13 @@ with corrective messages instead of secondary Python failures. See the
 verification status, and the deliberate boundary between CAD export and
 application-specific actuator/contact modeling.
 
+### Optional URDF collision decomposition
+
+For contact applications, an optional [post-export CoACD tool](docs/COLLISION_MESHES.md)
+creates a separate URDF bundle with convex collision meshes and provenance.
+Visual assets and existing exporter defaults are preserved. Its dependencies
+run in a separate Python environment, outside Fusion.
+
 ### User-interface language
 
 The v1.2.0 development candidate follows Fusion's user-interface language and
