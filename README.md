@@ -43,6 +43,10 @@ provides reusable Fusion 360 robot models for design, simulation, and learning.
   unsupported joint types, disconnected assemblies, and unsupported geometry.
 - GitHub Releases are the canonical update channel. We do not currently plan
   an Autodesk App Store update, so the App Store build may be older.
+- Current `main` also fixes URDF root inertial/joint frames and preserves small
+  numeric values in decimal output. The class and legacy URDF writers are
+  checked with the [Isaac Sim 6.2 isolated asset importer](docs/ISAAC_IMPORT_VALIDATION.md);
+  this is asset-conversion validation, not a full physics or live Fusion test.
 - Reusable robot designs are maintained separately in the
   [ACDC4Robot RobotLibrary](https://github.com/ACDC4Robot/RobotLibrary).
 
@@ -60,6 +64,9 @@ provides reusable Fusion 360 robot models for design, simulation, and learning.
 
 These are roadmap directions, not committed release dates. Issues and pull
 requests with reproducible Fusion fixtures are especially helpful.
+
+For joint-enumeration errors or nested URDF failures, see the
+[read-only Fusion diagnostic script and live retest steps](docs/JOINT_DIAGNOSTICS.md).
 
 ## Key Features
 Export robot description files directly from a Fusion 360 design using a GUI
@@ -164,6 +171,13 @@ with corrective messages instead of secondary Python failures. See the
 [MJCF export guide](docs/MJCF_EXPORT.md) for the supported assembly structure,
 verification status, and the deliberate boundary between CAD export and
 application-specific actuator/contact modeling.
+
+### Optional URDF collision decomposition
+
+For contact applications, an optional [post-export CoACD tool](docs/COLLISION_MESHES.md)
+creates a separate URDF bundle with convex collision meshes and provenance.
+Visual assets and existing exporter defaults are preserved. Its dependencies
+run in a separate Python environment, outside Fusion.
 
 ### User-interface language
 

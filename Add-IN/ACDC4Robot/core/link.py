@@ -77,14 +77,12 @@ class Link():
         # TODO: in closed loop mechanism, there exits one assembly method that
         # make one link have two parent joint, write a instruction or fix this bug
         # text_palette = constants.get_text_palette()
+        from .link_discovery import unique_joints
         app = adsk.core.Application.get()
         root = adsk.fusion.Design.cast(app.activeProduct).rootComponent
-        for joint in root.allJoints:
+        for joint in unique_joints(root):
             if joint.occurrenceOne == self.link:
                 return joint
-        for join in root.allAsBuiltJoints:
-            if join.occurrenceOne == self.link:
-                return join
         return None
 
     def get_name(self) -> str:
@@ -191,15 +189,16 @@ class Link():
                           [com_ixy, com_iyy, com_iyz],
                           [com_ixz, com_iyz, com_izz]]
 
-        # get the parent frame
+        # A root URDF link has no joint transform.  Its visual is expressed in
+        # Fusion world through link.pose, so its inertial frame is world too.
         parent_joint = self.get_parent_joint()
-        # parent frame for a link has parent joint, is the parent joint frame
-        # else, is the link frame itselt
         if parent_joint is None:
-            parent_frame: adsk.core.Matrix3D = self.pose
-        else:
-            joint = Joint(parent_joint)
-            parent_frame: adsk.core.Matrix3D = joint.get_joint_frame()
+            return [com_ixx, com_iyy, com_izz, com_ixy, com_iyz, com_ixz]
+
+        # get the parent frame
+        # parent frame for a link has parent joint, is the parent joint frame
+        joint = Joint(parent_joint)
+        parent_frame: adsk.core.Matrix3D = joint.get_joint_frame()
 
         # Change inertia tensor to the orientation of parent frame
 
@@ -324,10 +323,16 @@ class Link():
         pose_CoM: [x, y, z, roll, pitch, yaw]
         """
         if self.get_parent_joint() is None:
-            # for the first link which does not have parent joint
-            # do not know the CoM is w.r.t world frame or the link frame
-            # here let it be w.r.t the link frame
-            pose_CoM = self.get_CoM_sdf()
+            # A root URDF link has no joint pose and therefore uses Fusion's
+            # world frame, matching the root visual origin.
+            pose_CoM = [
+                self.phyPro.centerOfMass.x * 0.01,
+                self.phyPro.centerOfMass.y * 0.01,
+                self.phyPro.centerOfMass.z * 0.01,
+                0.0,
+                0.0,
+                0.0,
+            ]
         else:
             textPalette: adsk.core.Palette = constants.get_text_palette()
             joint = Joint(self.get_parent_joint())

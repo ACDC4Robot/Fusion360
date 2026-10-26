@@ -1,0 +1,26 @@
+# Tested isolated Isaac Sim 6.2 asset-import environment; Python 3.12.
+# No Kit runtime or GUI. Install in a dedicated venv.
+absl-py==2.5.1
+etils==1.14.0
+fsspec==2026.9.0
+glfw==2.11.0
+isaacsim-asset-isolated==6.2.0.0
+isaacsim-robot-schema==6.2.0.0
+mujoco==3.12.0
+mujoco-usd-converter==0.6.1
+newton-usd-schemas==0.5.0
+numpy==2.5.4
+numpy-stl==4.1.1
+pycollada==0.9.3
+PyOpenGL==3.1.10
+python-dateutil==3.0.0
+python-utils==4.1.4
+six==1.17.0
+tinyobjloader==2.0.0rc13
+typing_extensions==4.16.0
+tzdata==2026.5
+urdf-usd-converter==0.3.2
+usd-exchange==2.3.0
+usd-optimize==1.1.0
+usd-validation-nvidia==1.22.0
+zipp==4.1.2

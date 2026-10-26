@@ -1,0 +1,13 @@
+{
+  "autodeskProduct": "Fusion",
+  "type": "script",
+  "id": "",
+  "author": "ACDC4Robot contributors",
+  "description": {
+    "": "Collect local, read-only joint and constraint API metadata for export troubleshooting."
+  },
+  "version": "1.0.0",
+  "runOnStartup": false,
+  "supportedOS": "windows|mac",
+  "editEnabled": true
+}

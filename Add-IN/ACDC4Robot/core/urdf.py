@@ -169,14 +169,22 @@ class URDF():
             Pose (translation, rotation) of link's CoM frame C w.r.t link-frame L(parent-joint frame J)
             unit: m, radian
         """
-        # the link is the first link so called base-link
-        if not joint_has_geometry(link.get_parent_joint()):
-            # for the first link which does not have parent joint
-            # do not know the CoM is w.r.t world frame or the link frame
-            # do not found the details from the description, but according to the figure from:
-            # http://wiki.ros.org/urdf/XML/model
-            # it seems to be the link frame
-
+        parent_joint = link.get_parent_joint()
+        # A root URDF link has no joint pose, so its link frame is Fusion's
+        # world frame.  Its visual origin already uses link.pose in that frame;
+        # keep the inertial origin in the same frame.
+        if parent_joint is None:
+            inertial_origin = [
+                link.phyPro.centerOfMass.x * 0.01,
+                link.phyPro.centerOfMass.y * 0.01,
+                link.phyPro.centerOfMass.z * 0.01,
+                0.0,
+                0.0,
+                0.0,
+            ]
+        # A non-root rigid as-built joint can lack origin geometry.  Preserve
+        # the existing occurrence-frame fallback for that separate case.
+        elif not joint_has_geometry(parent_joint):
             # Let the orientation of center-of-mass frame C is same as link-frame L
             roll = 0.0
             pitch = 0.0
@@ -199,7 +207,7 @@ class URDF():
         # the link is not the first link
         else:
             # for the link is not the first link, CoM frame is w.r.t parent-joint frame J
-            joint = Joint(link.get_parent_joint())
+            joint = Joint(parent_joint)
             parent_joint_frame: adsk.core.Matrix3D = joint.get_joint_frame()
             from_origin, from_xAxis, from_yAxis, from_zAxis = parent_joint_frame.getAsCoordinateSystem()
 
@@ -262,8 +270,12 @@ class URDF():
 
         # get the parent frame
         parent_joint = link.get_parent_joint()
-        # parent frame for a link has parent joint, is the parent joint frame
-        # else, is the link frame itselt
+        # The root link frame is Fusion world (matching its visual origin), so
+        # the CoM-centered world-axis tensor needs no rotation.
+        if parent_joint is None:
+            return [com_ixx, com_iyy, com_izz, com_ixy, com_iyz, com_ixz]
+        # Preserve the existing occurrence-frame fallback for non-root rigid
+        # as-built joints that do not expose origin geometry.
         if not joint_has_geometry(parent_joint):
             parent_frame: adsk.core.Matrix3D = link.pose
         else:
@@ -425,9 +437,13 @@ class URDF():
         parent_joint: adsk.fusion.Joint = parent_link.get_parent_joint()
 
         # get the parent frame
-        if not joint_has_geometry(parent_joint):
-            # if the parent link does not have parent joint(which means the root link),
-            # then the parent link frame is the parent frame
+        if parent_joint is None:
+            # Root visual and inertial origins are expressed in Fusion world.
+            # A joint below the root must use that same parent link frame.
+            parent_frame: adsk.core.Matrix3D = adsk.core.Matrix3D.create()
+        elif not joint_has_geometry(parent_joint):
+            # Keep the existing non-root occurrence-frame fallback for rigid
+            # as-built parent joints that have no origin geometry.
             parent_frame: adsk.core.Matrix3D = parent_link.pose
         else:
             parent_joint: Joint = Joint(parent_joint)
@@ -558,14 +574,21 @@ def get_link_inertial_origin(link: Link) -> list[float]:
         Pose (translation, rotation) of link's CoM frame C w.r.t link-frame L(parent-joint frame J)
         unit: m, radian
     """
-    # the link is the first link so called base-link
-    if not joint_has_geometry(link.get_parent_joint()):
-        # for the first link which does not have parent joint
-        # do not know the CoM is w.r.t world frame or the link frame
-        # do not found the details from the description, but according to the figure from:
-        # http://wiki.ros.org/urdf/XML/model
-        # it seems to be the link frame
-
+    parent_joint = link.get_parent_joint()
+    # A root URDF link has no joint pose, so its link frame is Fusion's world
+    # frame.  Keep inertial and visual data in that same frame.
+    if parent_joint is None:
+        inertial_origin = [
+            link.phyPro.centerOfMass.x * 0.01,
+            link.phyPro.centerOfMass.y * 0.01,
+            link.phyPro.centerOfMass.z * 0.01,
+            0.0,
+            0.0,
+            0.0,
+        ]
+    # Preserve the old occurrence-frame fallback for a non-root rigid
+    # as-built joint without origin geometry.
+    elif not joint_has_geometry(parent_joint):
         # Let the orientation of center-of-mass frame C is same as link-frame L
         roll = 0.0
         pitch = 0.0
@@ -588,7 +611,7 @@ def get_link_inertial_origin(link: Link) -> list[float]:
     # the link is not the first link
     else:
         # for the link is not the first link, CoM frame is w.r.t parent-joint frame J
-        joint = Joint(link.get_parent_joint())
+        joint = Joint(parent_joint)
         parent_joint_frame: adsk.core.Matrix3D = joint.get_joint_frame()
         from_origin, from_xAxis, from_yAxis, from_zAxis = parent_joint_frame.getAsCoordinateSystem()
 
@@ -655,8 +678,12 @@ def get_link_inertia(link: Link) -> list[float]:
 
     # get the parent frame
     parent_joint = link.get_parent_joint()
-    # parent frame for a link has parent joint, is the parent joint frame
-    # else, is the link frame itselt
+    # The root link frame is Fusion world (matching its visual origin), so the
+    # CoM-centered world-axis tensor needs no rotation.
+    if parent_joint is None:
+        return [com_ixx, com_iyy, com_izz, com_ixy, com_iyz, com_ixz]
+    # Preserve the existing occurrence-frame fallback for non-root rigid
+    # as-built joints that do not expose origin geometry.
     if not joint_has_geometry(parent_joint):
         parent_frame: adsk.core.Matrix3D = link.pose
     else:
@@ -859,9 +886,13 @@ def get_joint_origin(joint: Joint) -> list[float]:
     parent_joint: adsk.fusion.Joint = parent_link.get_parent_joint()
 
     # get the parent frame
-    if not joint_has_geometry(parent_joint):
-        # if the parent link does not have parent joint(which means the root link),
-        # then the parent link frame is the parent frame
+    if parent_joint is None:
+        # Root visual and inertial origins are expressed in Fusion world.
+        # A joint below the root must use that same parent link frame.
+        parent_frame: adsk.core.Matrix3D = adsk.core.Matrix3D.create()
+    elif not joint_has_geometry(parent_joint):
+        # Keep the existing non-root occurrence-frame fallback for rigid
+        # as-built parent joints that have no origin geometry.
         parent_frame: adsk.core.Matrix3D = parent_link.pose
     else:
         parent_joint: Joint = Joint(parent_joint)
