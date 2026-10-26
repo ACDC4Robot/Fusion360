@@ -246,7 +246,8 @@ def get_mjcf(root_comp: adsk.fusion.Component, robot_name: str, dir: str) -> Ele
     parent_child_dict = {}
     all_occs = root_comp.allOccurrences
 
-    joints = [j for j in root_comp.allJoints] + [j for j in root_comp.allAsBuiltJoints]
+    from .link_discovery import unique_joints
+    joints = unique_joints(root_comp)
     for joint in joints:
         wrapped_joint = Joint(joint)
         if not wrapped_joint.is_valid():
