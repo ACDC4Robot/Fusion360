@@ -61,6 +61,9 @@ provides reusable Fusion 360 robot models for design, simulation, and learning.
 These are roadmap directions, not committed release dates. Issues and pull
 requests with reproducible Fusion fixtures are especially helpful.
 
+For joint-enumeration errors or nested URDF failures, see the
+[read-only Fusion diagnostic script and live retest steps](docs/JOINT_DIAGNOSTICS.md).
+
 ## Key Features
 Export robot description files directly from a Fusion 360 design using a GUI
 panel.

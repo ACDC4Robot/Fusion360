@@ -55,7 +55,9 @@ not alter the Fusion design or its original export.
   No mesh repair, remeshing, decimation, hull-count cap, extrusion, or hull
   dropping happens silently. Invalid source solids or empty/invalid backend
   results stop conversion. Each returned hull is checked for closed topology,
-  consistent outward winding, positive volume, and convexity before writing. Repair source geometry explicitly if needed.
+  consistent outward winding, positive volume, and convexity before writing.
+  Topology validation welds coincident vertices on a private copy and rejects
+  duplicate/nonmanifold faces; output geometry is never repaired or dropped. Repair source geometry explicitly if needed.
 - Hulls are individual ASCII STL files with 17-significant-digit coordinates.
   They are separate assets because engines that convexify each mesh as a whole
   can erase concavities if all pieces are combined into one file.

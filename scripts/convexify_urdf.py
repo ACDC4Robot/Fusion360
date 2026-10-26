@@ -94,8 +94,14 @@ def write_hull(path, vertices, faces, np, trimesh):
             not np.issubdtype(faces.dtype, np.integer) or
             faces.min() < 0 or faces.max() >= len(vertices)):
         raise ValueError("CoACD returned an invalid convex piece; no output bundle was published.")
-    hull = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
-    if (not hull.is_watertight or not hull.is_winding_consistent or
+    # Validate geometric topology on a private welded copy. Separate indexed
+    # shells can occupy identical coordinates and appear individually closed,
+    # while their STL becomes nonmanifold when coincident vertices are welded.
+    # Reject duplicate faces instead of repairing or silently dropping them.
+    hull = trimesh.Trimesh(vertices=vertices.copy(), faces=faces.copy(), process=False)
+    hull.merge_vertices()
+    has_duplicate_faces = len(np.unique(np.sort(hull.faces, axis=1), axis=0)) != len(hull.faces)
+    if (has_duplicate_faces or not hull.is_watertight or not hull.is_winding_consistent or
             not math.isfinite(hull.volume) or hull.volume <= 0):
         raise ValueError("CoACD returned a piece that is not a closed, outward-wound convex solid; no output bundle was published.")
     triangles = vertices[faces]

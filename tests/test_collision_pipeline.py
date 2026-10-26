@@ -126,6 +126,19 @@ class CollisionPipelineTests(unittest.TestCase):
             self.assertEqual(list(self.folder.glob(".result.stage-*")), [])
             self.assertEqual(self.source.read_bytes(), self.original)
 
+    def test_coincident_duplicate_shells_are_rejected_without_repair(self):
+        box = trimesh.creation.box()
+        vertices = np.vstack([box.vertices, box.vertices])
+        faces = np.vstack([box.faces, box.faces + len(box.vertices)])
+        original_vertices, original_faces = vertices.copy(), faces.copy()
+        with self.assertRaisesRegex(ValueError, "closed, outward-wound convex solid"):
+            tool.convert(self.source, self.output, decompose=lambda *args: [(vertices, faces)])
+        self.assertFalse(self.output.exists())
+        self.assertEqual(list(self.folder.glob(".result.stage-*")), [])
+        self.assertEqual(self.source.read_bytes(), self.original)
+        np.testing.assert_array_equal(vertices, original_vertices)
+        np.testing.assert_array_equal(faces, original_faces)
+
     def test_later_collision_failure_does_not_publish_earlier_hulls(self):
         root = ET.parse(self.source).getroot()
         link = root.find("link")
