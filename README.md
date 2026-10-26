@@ -43,6 +43,10 @@ provides reusable Fusion 360 robot models for design, simulation, and learning.
   unsupported joint types, disconnected assemblies, and unsupported geometry.
 - GitHub Releases are the canonical update channel. We do not currently plan
   an Autodesk App Store update, so the App Store build may be older.
+- Current `main` also fixes URDF root inertial/joint frames and preserves small
+  numeric values in decimal output. The class and legacy URDF writers are
+  checked with the [Isaac Sim 6.2 isolated asset importer](docs/ISAAC_IMPORT_VALIDATION.md);
+  this is asset-conversion validation, not a full physics or live Fusion test.
 - Reusable robot designs are maintained separately in the
   [ACDC4Robot RobotLibrary](https://github.com/ACDC4Robot/RobotLibrary).
 

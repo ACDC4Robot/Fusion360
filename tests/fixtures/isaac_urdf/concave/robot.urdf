@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="concave_multi_collision">
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.04166666666666667 0.04166666666666667 0.025" rpy="0 0 0" />
+      <mass value="0.000375" />
+      <inertia ixx="0.00000036458333333" iyy="0.00000036458333333" izz="0.00000057291666667" ixy="0.00000010416666667" ixz="0" iyz="0" />
+    </inertial>
+    <visual name="concave_visual">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="l_prism.stl" scale=".001 .001 .001" />
+      </geometry>
+    </visual>
+    <collision name="concave_collision">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="l_prism.stl" scale=".001 .001 .001" />
+      </geometry>
+    </collision>
+  </link>
+</robot>

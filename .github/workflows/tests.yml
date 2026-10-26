@@ -46,3 +46,25 @@ jobs:
           ACDC_RUN_COACD: '1'
           OMP_NUM_THREADS: '1'
         run: python -m unittest discover -s tests -v
+
+  isaac-asset-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OMP_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Install isolated asset importer and collision tool
+        run: python -m pip install -r scripts/requirements-isaac-import.txt -r scripts/requirements-collision.txt
+      - name: Import both URDF writers and convex collision assets
+        run: |
+          mkdir -p work
+          python scripts/smoke_test_isaac_urdf.py tests/fixtures/isaac_urdf/class.urdf work/isaac-class --require-decimal
+          python scripts/smoke_test_isaac_urdf.py tests/fixtures/isaac_urdf/legacy.urdf work/isaac-legacy --require-decimal
+          python scripts/convexify_urdf.py tests/fixtures/isaac_urdf/concave/robot.urdf work/concave-collision
+          python scripts/smoke_test_isaac_urdf.py work/concave-collision/robot.urdf work/isaac-concave --require-decimal
