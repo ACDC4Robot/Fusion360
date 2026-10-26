@@ -134,6 +134,10 @@ def run():
                     i18n.translate("preflight_title", locale),
                 )
                 return 0
+
+        # Discover before creating output folders/reports. In particular, a
+        # failed Fusion joint query must never become an incomplete export.
+        link_list, joint_list = get_link_joint_list(design)
         
         # Set the folder to store exported files
         folder_dialog = ui.createFolderDialog()
@@ -153,9 +157,6 @@ def run():
             preflight.write_report(save_folder, preflight_report)
 
         ui.messageBox(i18n.translate("start_export", locale), msg_box_title)
-
-        # get all the link & joint elements to export
-        link_list, joint_list = get_link_joint_list(design)
 
         if rdf in (None, "None"):
             ui.messageBox(i18n.translate("select_description_format", locale), msg_box_title)

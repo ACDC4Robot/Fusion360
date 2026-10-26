@@ -7,16 +7,38 @@ MJCF still applies its separate live-validated geometry preflight.
 
 def items(collection):
     try:
-        return list(collection)
+        iterator = iter(collection)
     except TypeError:
+        # A Fusion collection may expose only count/item. Do not fall back
+        # after a real iterator has failed and silently accept partial data.
+        if hasattr(type(collection), '__iter__'):
+            raise
         return [collection.item(i) for i in range(collection.count)]
+    return list(iterator)
+
+
+class JointEnumerationError(ValueError):
+    """Fusion could not supply a complete joint list; exporting is unsafe."""
+
+
+def root_joints(root, collection_name):
+    """Read a complete collection or stop, preserving the Fusion exception."""
+    try:
+        return items(getattr(root, collection_name))
+    except Exception as exc:
+        raise JointEnumerationError(
+            f"Fusion could not read root.{collection_name}: {exc}. "
+            "Export stopped because the joint list may be incomplete. "
+            "Keep constraints intact and run the joint diagnostic script "
+            "on a minimal copy of the assembly."
+        ) from exc
 
 
 def unique_joints(root):
     # Names and entityToken strings are not identity keys. Fusion documents that
     # different token strings can identify the same entity. Compare API objects.
     result = []
-    for joint in items(root.allJoints) + items(root.allAsBuiltJoints):
+    for joint in root_joints(root, 'allJoints') + root_joints(root, 'allAsBuiltJoints'):
         if not any(joint is previous or joint == previous for previous in result):
             result.append(joint)
     return result

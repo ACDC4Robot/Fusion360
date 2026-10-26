@@ -77,14 +77,12 @@ class Link():
         # TODO: in closed loop mechanism, there exits one assembly method that
         # make one link have two parent joint, write a instruction or fix this bug
         # text_palette = constants.get_text_palette()
+        from .link_discovery import unique_joints
         app = adsk.core.Application.get()
         root = adsk.fusion.Design.cast(app.activeProduct).rootComponent
-        for joint in root.allJoints:
+        for joint in unique_joints(root):
             if joint.occurrenceOne == self.link:
                 return joint
-        for join in root.allAsBuiltJoints:
-            if join.occurrenceOne == self.link:
-                return join
         return None
 
     def get_name(self) -> str:

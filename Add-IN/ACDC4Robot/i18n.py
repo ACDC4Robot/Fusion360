@@ -160,6 +160,14 @@ _LEGACY_EXPORT_REPLACEMENTS_ZH = (
 
 _PREFLIGHT_PATTERNS_ZH = (
     (
+        r"Fusion could not read root\.(?P<collection>allJoints|allAsBuiltJoints): (?P<details>.+)\. "
+        r"Export stopped because the joint list may be incomplete\. "
+        r"Keep constraints intact and run the joint diagnostic script "
+        r"on a minimal copy of the assembly\.",
+        "Fusion 无法读取 root.{collection}：{details}。由于关节列表可能不完整，已停止导出。"
+        "请保留约束，并在装配体的最小副本上运行关节诊断脚本。",
+    ),
+    (
         r"(?P<name>.+) contains nested occurrences; flatten the robot assembly before MJCF export\.",
         "{name} 包含嵌套实例；请在导出 MJCF 前将机器人装配体扁平化。",
     ),
