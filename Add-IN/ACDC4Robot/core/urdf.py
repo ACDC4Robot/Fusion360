@@ -10,7 +10,7 @@ from xml.etree.ElementTree import Element, SubElement
 import xml.etree.ElementTree as ET
 from . import math_operation as math_op
 from . import utils
-from .serialization import normalize_urdf_numbers
+from .serialization import normalize_urdf_numbers, validate_xml_names
 from .robot import Robot
 
 class URDF():
@@ -35,6 +35,8 @@ class URDF():
             joint_ele = self.get_joint_element(joint)
             if joint_ele is not None:
                 robot_ele.append(joint_ele)
+
+        validate_xml_names(robot_ele)
 
         # set indent to pretty the xml output
         ET.indent(urdf_tree, space="    ", level=0)

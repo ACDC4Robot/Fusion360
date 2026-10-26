@@ -41,3 +41,24 @@ def validate_export_names(occurrences):
         if not name or name in seen:
             raise ValueError(f'Invalid or duplicate export name {name}: {seen.get(name, "")} and {path}')
         seen[name] = path
+
+
+def validate_xml_names(parent):
+    """Check actual emitted identities before a description file is written.
+
+    Legacy URDF and SDF use bare joint names, while class-based URDF prefixes
+    them with the child path. Validate the output rather than assuming either
+    naming convention when checking collisions.
+    """
+    seen = {}
+    for node in parent:
+        if node.tag not in ('link', 'joint', 'loop'):
+            continue
+        names = seen.setdefault(node.tag, set())
+        name = node.get('name')
+        if not name or name in names:
+            raise ValueError(
+                f'Invalid or duplicate {node.tag} export name {name!r}. '
+                'Rename the corresponding Fusion objects so their exported names are unique.'
+            )
+        names.add(name)

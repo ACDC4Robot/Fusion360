@@ -7,6 +7,7 @@ from .joint import Joint
 from . import urdf as URDF
 from . import sdf as SDF
 from . import mjcf as MJCF
+from .serialization import validate_xml_names
 import adsk, adsk.core, adsk.fusion
 
 
@@ -37,6 +38,8 @@ def write_sdf(link_list: list[Link], joint_list: list[Joint], dir: str, robot_na
     for joint in joint_list:
         joint_ele = _contextualize("joint", joint.name, SDF.get_joint_element, joint)
         model.append(joint_ele)
+
+    validate_xml_names(model)
 
     # set indent to pretty the xml output
     ET.indent(sdf_tree, space="    ", level=0)
@@ -83,6 +86,8 @@ def write_urdf(link_list: list[Link], joint_list: list[Joint], dir: str, robot_n
         joint_ele = _contextualize("joint", joint.name, URDF.get_joint_element, joint)
         if joint_ele is not None:
             robot_ele.append(joint_ele)
+
+    validate_xml_names(robot_ele)
 
     # set indent to pretty the xml output
     ET.indent(urdf_tree, space="    ", level=0)

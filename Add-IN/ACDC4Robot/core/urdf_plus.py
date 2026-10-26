@@ -12,6 +12,7 @@ from . import math_operation as math_op
 from . import utils
 from ..commands.ACDC4Robot import constants
 from .urdf import URDF
+from .serialization import validate_xml_names
 
 class URDF_PLUS(URDF):
     """
@@ -44,6 +45,8 @@ class URDF_PLUS(URDF):
             loop_ele = self.get_loop_joint_element(loop)
             robot_ele.append(loop_ele)
         
+        validate_xml_names(robot_ele)
+
         # set indent to pretty the xml output
         ET.indent(urdf_tree, space="    ", level=0)
 
