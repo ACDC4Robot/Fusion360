@@ -434,9 +434,13 @@ class URDF():
         parent_joint: adsk.fusion.Joint = parent_link.get_parent_joint()
 
         # get the parent frame
-        if not joint_has_geometry(parent_joint):
-            # if the parent link does not have parent joint(which means the root link),
-            # then the parent link frame is the parent frame
+        if parent_joint is None:
+            # Root visual and inertial origins are expressed in Fusion world.
+            # A joint below the root must use that same parent link frame.
+            parent_frame: adsk.core.Matrix3D = adsk.core.Matrix3D.create()
+        elif not joint_has_geometry(parent_joint):
+            # Keep the existing non-root occurrence-frame fallback for rigid
+            # as-built parent joints that have no origin geometry.
             parent_frame: adsk.core.Matrix3D = parent_link.pose
         else:
             parent_joint: Joint = Joint(parent_joint)
@@ -879,9 +883,13 @@ def get_joint_origin(joint: Joint) -> list[float]:
     parent_joint: adsk.fusion.Joint = parent_link.get_parent_joint()
 
     # get the parent frame
-    if not joint_has_geometry(parent_joint):
-        # if the parent link does not have parent joint(which means the root link),
-        # then the parent link frame is the parent frame
+    if parent_joint is None:
+        # Root visual and inertial origins are expressed in Fusion world.
+        # A joint below the root must use that same parent link frame.
+        parent_frame: adsk.core.Matrix3D = adsk.core.Matrix3D.create()
+    elif not joint_has_geometry(parent_joint):
+        # Keep the existing non-root occurrence-frame fallback for rigid
+        # as-built parent joints that have no origin geometry.
         parent_frame: adsk.core.Matrix3D = parent_link.pose
     else:
         parent_joint: Joint = Joint(parent_joint)

@@ -74,7 +74,7 @@ adsk.fusion = _module(
 )
 
 _module(PACKAGE).__path__ = []
-_module(f"{PACKAGE}.core").__path__ = []
+_module(f"{PACKAGE}.core").__path__ = [str(CORE_ROOT)]
 _module(f"{PACKAGE}.commands").__path__ = []
 _module(f"{PACKAGE}.commands.ACDC4Robot").__path__ = []
 _module(f"{PACKAGE}.commands.ACDC4Robot.constants", get_text_palette=lambda: None)
